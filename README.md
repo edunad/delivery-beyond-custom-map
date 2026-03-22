@@ -1,6 +1,6 @@
-# delivery-beyond-custom-map
-Custom map for delivery-beyond unity project
+# Check out the [WIKI](https://delivery.hyena.quest/tutorials/simple_map) on how to create your own custom map for [Delivery & Beyond](https://store.steampowered.com/app/3376480/Delivery__Beyond)
 
-
-# SETUP
-## Requires Unity 6.4
+### REQUIREMENTS
+- Unity 6.4
+- Hammer++ (Optional)
+- Source SDK Single Player (Optional, for Hammer++)

@@ -28,44 +28,6 @@ namespace HyenaQuest
             (BuildTarget.StandaloneLinux64, "linux")
         };
 
-        [MenuItem("HyenaQuest/Maps/Build All Maps")]
-        public static void BuildAllMaps() {
-            string[] guids = AssetDatabase.FindAssets("t:WorldSettings");
-            if (guids.Length == 0)
-            {
-                EditorUtility.DisplayDialog("Map Builder", "No WorldSettings assets found in the project.", "OK");
-                return;
-            }
-
-            List<AssetBundleBuild> contentBuilds = new List<AssetBundleBuild>();
-            List<AssetBundleBuild> shaderBuilds = new List<AssetBundleBuild>();
-            Dictionary<string, WorldSettings> settingsMap = new Dictionary<string, WorldSettings>();
-
-            foreach (string guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                WorldSettings settings = AssetDatabase.LoadAssetAtPath<WorldSettings>(path);
-                (AssetBundleBuild? content, AssetBundleBuild? shaders) = BundleBuilder.CreateBuildsForPath(path);
-
-                if (content.HasValue && settings) {
-                    contentBuilds.Add(content.Value);
-                    settingsMap[content.Value.assetBundleName] = settings;
-                    if (shaders.HasValue) shaderBuilds.Add(shaders.Value);
-                }
-            }
-
-            if (contentBuilds.Count == 0)
-            {
-                EditorUtility.DisplayDialog("Map Builder", "No valid maps to build.", "OK");
-                return;
-            }
-
-            BundleBuilder.BuildBundles(contentBuilds, shaderBuilds);
-            BundleBuilder.OrganizeAndCleanup(contentBuilds, shaderBuilds, settingsMap);
-
-            Debug.Log($"Built {contentBuilds.Count} map bundle(s) for {BundleBuilder.PLATFORMS.Length} platform(s) to {Path.GetFullPath(BundleBuilder.OUTPUT_FOLDER)}/");
-        }
-
         [MenuItem("HyenaQuest/Maps/Build Selected Map")]
         public static void BuildSelectedMap() {
             WorldSettings selected = Selection.activeObject as WorldSettings;
