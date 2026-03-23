@@ -66,44 +66,6 @@ namespace HyenaQuest
         }
 
         #region PRIVATE
-        private static string GenerateShaderVariantCollection(string mapName, IEnumerable<string> shaderPaths)
-        {
-            string svcPath = $"Assets/__Generated/{mapName}_AutoSVC.shadervariants";
-            
-            Directory.CreateDirectory("Assets/__Generated");
-            
-            ShaderVariantCollection svc = new ShaderVariantCollection();
-            foreach (string path in shaderPaths)
-            {
-                Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-                if (!mat) continue;
-
-                Shader shader = mat.shader;
-                if (!shader) continue;
-
-                string[] keywords = mat.shaderKeywords;
-                try
-                {
-                    ShaderVariantCollection.ShaderVariant variant = new ShaderVariantCollection.ShaderVariant(
-                        shader,
-                        PassType.Normal,
-                        keywords
-                    );
-
-                    svc.Add(variant);
-                }
-                catch
-                {
-                    // ignored
-                }
-            }
-            
-            AssetDatabase.CreateAsset(svc, svcPath);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-
-            return svcPath;
-        }
         
         private static (AssetBundleBuild? content, AssetBundleBuild? shaders) CreateBuildsForPath(string settingsPath) {
             WorldSettings settings = AssetDatabase.LoadAssetAtPath<WorldSettings>(settingsPath);
@@ -113,14 +75,6 @@ namespace HyenaQuest
             string bundleName = Path.GetFileName(mapFolder).ToLowerInvariant();
 
             (string[] contentAssets, string[] shaderAssets) = CollectFolderAssets(mapFolder);
-            
-            string svcPath = BundleBuilder.GenerateShaderVariantCollection(bundleName, contentAssets.Concat(shaderAssets));
-            if (!string.IsNullOrEmpty(svcPath))
-            {
-                List<string> shaderList = shaderAssets.ToList();
-                shaderList.Add(svcPath);
-                shaderAssets = shaderList.ToArray();
-            }
             
             AssetBundleBuild contentBuild = new AssetBundleBuild {
                 assetBundleName = $"{bundleName}.bundle",
