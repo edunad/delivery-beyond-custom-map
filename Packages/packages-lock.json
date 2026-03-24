@@ -9,7 +9,7 @@
         "com.failcake.vmf.importer": "1.0.0",
         "com.failcake.timers": "0.0.1"
       },
-      "hash": "4879b5659ca7c54ed769402c928f1a733ba2c402"
+      "hash": "0becee6ce92b7d4745d70f0975e2ef8bf8f3ee01"
     },
     "com.failcake.timers": {
       "version": "https://github.com/edunad/FailCake.Timers.git?path=/com.failcake.timers",
