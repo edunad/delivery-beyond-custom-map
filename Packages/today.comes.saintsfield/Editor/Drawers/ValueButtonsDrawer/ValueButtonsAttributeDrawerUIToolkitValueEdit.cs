@@ -1,3 +1,4 @@
+#if UNITY_2021_3_OR_NEWER
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -65,7 +66,7 @@ namespace SaintsField.Editor.Drawers.ValueButtonsDrawer
 
                 UIToolkitFieldWrapper uiToolkitFieldWrapper = new UIToolkitFieldWrapper(label, visualInput);
                 Add(uiToolkitFieldWrapper);
-                UIToolkitUtils.UIToolkitValueEditAfterProcess(uiToolkitFieldWrapper, setterOrNull,
+                UIToolkitUtils.UIToolkitValueEditAfterProcess(uiToolkitFieldWrapper, setterOrNull != null,
                     labelGrayColor, inHorizontalLayout);
 
                 SubPanel = new VisualElement
@@ -80,6 +81,7 @@ namespace SaintsField.Editor.Drawers.ValueButtonsDrawer
                 Add(SubPanel);
 
                 ValueButtonsArrangeElement.BindSubContainer(SubPanel);
+                ValueButtonsArrangeElement.SetGreedy(!LeftExpandButton.value);
             }
         }
 
@@ -101,7 +103,7 @@ namespace SaintsField.Editor.Drawers.ValueButtonsDrawer
 
             RichTextDrawer.EmptyRichTextTagProvider emptyRichTextTagProvider = new RichTextDrawer.EmptyRichTextTagProvider();
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (IAdvancedDropdownList info in metaInfo.DropdownListValue)
+            foreach (IDropdown info in metaInfo.DropdownListValue)
             {
                 IReadOnlyList<RichTextDrawer.RichTextChunk> chunks = RichTextDrawer.ParseRichXmlWithProvider(
                     info.displayName, emptyRichTextTagProvider).ToArray();
@@ -114,7 +116,10 @@ namespace SaintsField.Editor.Drawers.ValueButtonsDrawer
             wrapper.ValueButtonsArrangeElement.schedule.Execute(() =>
             {
                 wrapper.LeftExpandButton.RegisterValueChangedCallback(evt =>
-                    wrapper.SubPanel.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None);
+                {
+                    wrapper.ValueButtonsArrangeElement.SetGreedy(!evt.newValue);
+                    wrapper.SubPanel.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None;
+                });
                 wrapper.ValueButtonsArrangeElement.OnCalcArrangeDoneAddListener(b =>
                 {
                     wrapper.SubPanel.style.display =
@@ -168,3 +173,4 @@ namespace SaintsField.Editor.Drawers.ValueButtonsDrawer
         }
     }
 }
+#endif

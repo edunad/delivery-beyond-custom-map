@@ -1,10 +1,18 @@
 fileFormatVersion: 2
 guid: 502fdec5dd1347b6a44aa9387fc5229f
-timeCreated: 1737439082
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
 AssetOrigin:
   serializedVersion: 1
   productId: 269741
   packageName: Saints Field
-  packageVersion: 5.11.4 Bug Fix
+  packageVersion: 5.20.0
   assetPath: Packages/today.comes.saintsfield/Editor/Drawers/ShaderDrawers/ShaderParamDrawer/ShaderParamAttributeDrawerIMGUI.cs
-  uploadId: 871252
+  uploadId: 941664

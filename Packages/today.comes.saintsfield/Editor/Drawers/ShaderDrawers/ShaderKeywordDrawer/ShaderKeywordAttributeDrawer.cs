@@ -27,12 +27,15 @@ namespace SaintsField.Editor.Drawers.ShaderDrawers.ShaderKeywordDrawer
 
         private static AdvancedDropdownMetaInfo GetMetaInfo(int selectedIndex, IReadOnlyList<string> shaderKeywords, bool isImGui)
         {
-            AdvancedDropdownList<string> dropdownListValue =
-                new AdvancedDropdownList<string>(isImGui? "Shader Keywords": "");
+            Dropdown<string> dropdownListValue =
+                new Dropdown<string>(isImGui? "Shader Keywords": "");
+
+            dropdownListValue.Add("[Empty String]", string.Empty);
+            dropdownListValue.AddSeparator();
 
             IReadOnlyList<object> curValues = selectedIndex >= 0
                 ? new[] { (object)shaderKeywords[selectedIndex] }
-                : Array.Empty<object>();
+                : new object[] { string.Empty };
 
             foreach (string shaderKeyword in shaderKeywords)
             {

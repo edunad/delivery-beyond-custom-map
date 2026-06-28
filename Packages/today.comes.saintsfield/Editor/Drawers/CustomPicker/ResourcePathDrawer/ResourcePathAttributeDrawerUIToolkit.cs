@@ -1,4 +1,4 @@
-#if UNITY_2021_3_OR_NEWER
+#if UNITY_2021_3_OR_NEWER && !SAINTSFIELD_UI_TOOLKIT_DISABLE
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -71,7 +71,9 @@ namespace SaintsField.Editor.Drawers.CustomPicker.ResourcePathDrawer
         {
             ResourcePathAttribute resourcePathAttribute = (ResourcePathAttribute)saintsAttribute;
             IReadOnlyList<Type> requiredTypes = resourcePathAttribute.RequiredTypes;
-            ObjectField objectField = container.Q<ObjectField>(NameObjectField(property));
+            EmptyPrefabOverrideElement wrapper = container.Q<EmptyPrefabOverrideElement>();
+            UIToolkitUtils.AddContextualMenuManipulator(wrapper, property, () => {});
+            ObjectField objectField = wrapper.Q<ObjectField>(NameObjectField(property));
 
             if (resourcePathAttribute.CustomPicker)
             {
@@ -97,7 +99,7 @@ namespace SaintsField.Editor.Drawers.CustomPicker.ResourcePathDrawer
             Object newObjectValue = GetObjFromStr(property.stringValue, resourcePathAttribute.CompType,
                 resourcePathAttribute.EStr);
             string errorMessage =
-                FieldResourcesSelectWindow.ValidateObject(newObjectValue, resourcePathAttribute.EStr, requiredTypes);
+                ValidateObject(newObjectValue, resourcePathAttribute.EStr, requiredTypes);
             if (errorMessage != "")
             {
                 helpBox.text = errorMessage;
@@ -154,7 +156,7 @@ namespace SaintsField.Editor.Drawers.CustomPicker.ResourcePathDrawer
             Payload payload = (Payload)helpBox.userData;
 
             string errorMessage =
-                FieldResourcesSelectWindow.ValidateObject(newValue, resourcePathAttribute.EStr, requiredTypes);
+                ValidateObject(newValue, resourcePathAttribute.EStr, requiredTypes);
 
             if (errorMessage == "")
             {

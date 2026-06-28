@@ -4,10 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using SaintsField.ComponentHeader;
-using SaintsField.Editor.Core;
 using SaintsField.Editor.HeaderGUI.Drawer;
 using SaintsField.Editor.Utils;
+using SaintsField.Editor.Utils.RuntimeSave;
+using SaintsField.Utils;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -20,7 +22,7 @@ namespace SaintsField.Editor.HeaderGUI
 #endif
         public static void DelayInit()
         {
-            EditorApplication.delayCall += () => EnsureInitLoad();
+            EditorApplication.delayCall += DelayCallEnsureInitLoad;
             EditorApplication.delayCall += LoadTypeToRenderTargetInfo;
             EditorApplication.delayCall += ManuallyUpdate;
         }
@@ -33,6 +35,76 @@ namespace SaintsField.Editor.HeaderGUI
 
         private static FieldInfo _sEditorHeaderItemsMethods;
 
+        [InitializeOnLoadMethod]
+        public static void InitOnLoad()
+        {
+            // EditorApplication.delayCall += DelayCallEnsureInitLoad;
+            UnityEditor.Editor.finishedDefaultHeaderGUI -= OnFinishedHeaderGUI;
+            UnityEditor.Editor.finishedDefaultHeaderGUI += OnFinishedHeaderGUI;
+        }
+
+        private static readonly HashSet<Object> CheckedTargets = new HashSet<Object>();
+
+        private static void OnFinishedHeaderGUI(UnityEditor.Editor editor)
+        {
+            // Debug.Log(editor.target);
+            if (_initLoad)
+            {
+                return;
+            }
+
+            Object target = editor.target;
+            // ReSharper disable once InvertIf
+            if(CheckedTargets.Add(target))
+            {
+                // InitLoad();
+                _initStartTime = EditorApplication.timeSinceStartup;
+                EditorApplication.delayCall += LoopEnsureInitLoadUntilTimeout;
+            }
+        }
+
+        private static double _initStartTime;
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_COMPONENT_HEADER
+        [MenuItem(RuntimeUtil.MenuRoot + "/DEBUG Header Init")]
+#endif
+        private static void DelayCallEnsureInitLoad()
+        {
+            _initStartTime = EditorApplication.timeSinceStartup;
+            LoopEnsureInitLoadUntilTimeout();
+
+            // EditorApplication.playModeStateChanged += PlayModeStateChangedEnsureInitLoad;
+        }
+
+//         private static void PlayModeStateChangedEnsureInitLoad(PlayModeStateChange state)
+//         {
+//             if(state is PlayModeStateChange.EnteredPlayMode or PlayModeStateChange.EnteredEditMode)
+//             {
+// #if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_COMPONENT_HEADER
+//                 Debug.Log($"play mode changed ensure init {state}");
+// #endif
+//
+//                 _initStartTime = EditorApplication.timeSinceStartup;
+//                 LoopEnsureInitLoadUntilTimeout();
+//             }
+//         }
+
+        private static void LoopEnsureInitLoadUntilTimeout()
+        {
+            if (EnsureInitLoad())
+            {
+                return;
+            }
+
+            // ReSharper disable once InvertIf
+            if (EditorApplication.timeSinceStartup - _initStartTime < 1)
+            {
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_COMPONENT_HEADER
+                Debug.Log("failed to init component header, retry later");
+#endif
+                EditorApplication.delayCall += LoopEnsureInitLoadUntilTimeout;
+            }
+        }
+
         private static bool _initLoad;
 
         public static bool EnsureInitLoad()
@@ -44,6 +116,7 @@ namespace SaintsField.Editor.HeaderGUI
 
             return InitLoad();
         }
+
 
         private static bool InitLoad()
         {
@@ -58,10 +131,11 @@ namespace SaintsField.Editor.HeaderGUI
             }
 
             IList value = (IList)_sEditorHeaderItemsMethods.GetValue(null);
-            // Debug.Log($"value={value}");
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_COMPONENT_HEADER
+            Debug.Log($"component header value={value}");
+#endif
             if (value == null)
             {
-                // EditorApplication.delayCall += InitLoad;
                 return false;
             }
 
@@ -76,6 +150,13 @@ namespace SaintsField.Editor.HeaderGUI
             // ReSharper disable once AssignNullToNotNullAttribute
             value.Add(Delegate.CreateDelegate(delegateType, methodInfo));
             _initLoad = true;
+
+            if (EditorWindow.focusedWindow != null)
+            {
+                EditorWindow.focusedWindow.Repaint();
+            }
+            InternalEditorUtility.RepaintAllViews();
+
             return true;
         }
 
@@ -262,12 +343,128 @@ namespace SaintsField.Editor.HeaderGUI
             }
         }
 
+        private static Texture2D _saveIconTexture;
+        private static Texture2D _checkIconTexture;
+        private static Texture2D _trashIconTexture;
+
+        private enum RuntimeSaveAnimIcon
+        {
+            Check,
+            Trash,
+        }
+
+        // Per-target check animation state
+        private const double CheckAnimDuration = 1.0; // seconds total before reverting to save icon
+        private static readonly Dictionary<
+#if UNITY_6000_4_OR_NEWER
+            EntityId
+#else
+                int
+#endif
+            , double> SaveCheckAnimEndTime = new Dictionary<
+#if UNITY_6000_4_OR_NEWER
+            EntityId
+#else
+                int
+#endif
+            , double>();
+        private static readonly Dictionary<
+#if UNITY_6000_4_OR_NEWER
+            EntityId
+#else
+                int
+#endif
+            , RuntimeSaveAnimIcon> RuntimeSaveAnimIcons = new Dictionary<
+#if UNITY_6000_4_OR_NEWER
+            EntityId
+#else
+                int
+#endif
+            , RuntimeSaveAnimIcon>();
+
+        private static void SaveRuntimeComponents(Object[] targets,
+#if UNITY_6000_4_OR_NEWER
+            EntityId
+#else
+                int
+#endif
+            targetKey)
+        {
+            foreach (Object target in targets)
+            {
+                if (target is Component component)
+                {
+                    RuntimeSaverUtil.SaveComponent(component);
+                }
+            }
+
+            AnimateRuntimeSaveIcon(targetKey, RuntimeSaveAnimIcon.Check);
+        }
+
+        private static void AnimateRuntimeSaveIcon(
+#if UNITY_6000_4_OR_NEWER
+            EntityId
+#else
+                int
+#endif
+            targetKey, RuntimeSaveAnimIcon icon)
+        {
+            SaveCheckAnimEndTime[targetKey] = EditorApplication.timeSinceStartup + CheckAnimDuration;
+            RuntimeSaveAnimIcons[targetKey] = icon;
+            InternalEditorUtility.RepaintAllViews();
+        }
+
+        private static void ShowRuntimeSaveContextMenu(Object[] targets,
+#if UNITY_6000_4_OR_NEWER
+            EntityId
+#else
+                int
+#endif
+            targetKey)
+        {
+            GenericMenu menu = new GenericMenu();
+            menu.AddItem(new GUIContent("Remove Saved Values"), false, () =>
+            {
+                bool anyDeleted = false;
+                foreach (Object target in targets)
+                {
+                    if (target is Component component)
+                    {
+                        bool deleted = RuntimeSaverUtil.RemoveComponent(component);
+                        if (deleted)
+                        {
+                            anyDeleted = true;
+                        }
+                    }
+                }
+
+                if (anyDeleted)
+                {
+                    AnimateRuntimeSaveIcon(targetKey, RuntimeSaveAnimIcon.Trash);
+                }
+            });
+            menu.AddItem(new GUIContent("Destroy And Save"), false, () =>
+            {
+                foreach (Object target in targets)
+                {
+                    if (target is Component component && component != null)
+                    {
+                        RuntimeSaverUtil.DestroyComponent(component);
+                        Object.DestroyImmediate(component);
+                    }
+                }
+            });
+            menu.ShowAsContext();
+        }
+
         private static bool DrawMethod(Rect rectangle, Object[] targets)
         {
             if (rectangle.x < 0)
             {
                 return false;
             }
+
+            // Debug.Log($"DrawMethod {string.Join<Object>(",", targets)}");
 
             // EditorGUI.DrawRect(rectangle, Color.blue);
 
@@ -302,16 +499,9 @@ namespace SaintsField.Editor.HeaderGUI
                 }
 
                 Rect useRect = new Rect(rectangle);
+                // EditorGUI.DrawRect(useRect, Color.red);
                 rectangle.x -= rectangle.height;
-                rectangle.xMax -= rectangle.height;
-
-                // Rect actualRect = new Rect(useRect)
-                // {
-                //     x = useRect.x + 1,
-                //     width = useRect.width - 2,
-                //     y = useRect.y + 1,
-                //     height = useRect.height - 2,
-                // };
+                // rectangle.xMax -= rectangle.height;
 
                 GUIContent content = new GUIContent(EditorGUIUtility.IconContent("d_Search Icon"))
                 {
@@ -336,6 +526,119 @@ namespace SaintsField.Editor.HeaderGUI
                 SearchableSaintsEditors.Remove(toRemove);
             }
             // SearchableSaintsEditors.Remove(removeSaintsEditor);
+
+            bool runtimeSaveIcon = SaintsFieldConfigUtil.GetMonoBehaviorRuntimeSave();
+            if(runtimeSaveIcon)
+            {
+                _checkIconTexture ??= Util.LoadResource<Texture2D>("check.png");
+                _trashIconTexture ??= Util.LoadResource<Texture2D>("trash.png");
+
+                Rect useRect = new Rect(rectangle);
+                // Debug.Log(useRect);
+                // EditorGUI.DrawRect(useRect, Color.green);
+                rectangle.x -= rectangle.height;
+                // rectangle.width -= rectangle.height;
+                // Debug.Log(rectangle);
+
+                _saveIconTexture ??= Util.LoadResource<Texture2D>("save.png");
+
+                // Determine if we are currently in the "saved/check" animation phase for this target
+
+#if UNITY_6000_4_OR_NEWER
+                EntityId
+#else
+                int
+#endif
+                    targetKey = firstTarget.
+#if UNITY_6000_4_OR_NEWER
+                        GetEntityId
+#else
+                        GetInstanceID
+#endif
+                    ();
+                double now = EditorApplication.timeSinceStartup;
+                bool isAnimating = SaveCheckAnimEndTime.TryGetValue(targetKey, out double animEnd) && now < animEnd;
+                Event currentEvent = Event.current;
+
+                if (currentEvent.type == EventType.MouseDown && currentEvent.button == 1 && useRect.Contains(currentEvent.mousePosition))
+                {
+                    ShowRuntimeSaveContextMenu(targets, targetKey);
+                    currentEvent.Use();
+                }
+
+                if (isAnimating)
+                {
+                    // Draw a green background circle/box, then the white check icon on top
+                    // Fade the green by remaining time so it eases out as it returns to default.
+                    float remaining = (float)(animEnd - now);
+                    float t = Mathf.Clamp01(remaining / (float)CheckAnimDuration);
+                    // Pop scale: quick scale-up then settle to 1
+                    float pop = 1f + 0.5f * Mathf.Sin(Mathf.Clamp01((1f - t) * 3f) * Mathf.PI);
+                    Rect bgRect = useRect;
+                    bgRect.width *= pop;
+                    bgRect.height *= pop;
+                    bgRect.x = useRect.x + (useRect.width - bgRect.width) * 0.5f;
+                    bgRect.y = useRect.y + (useRect.height - bgRect.height) * 0.5f;
+
+                    Rect iconRect = bgRect;
+                    float pad = bgRect.height * 0.15f;
+                    iconRect.x += pad;
+                    iconRect.y += pad;
+                    iconRect.width -= pad * 2;
+                    iconRect.height -= pad * 2;
+                    // ReSharper disable once CanSimplifyDictionaryTryGetValueWithGetValueOrDefault
+                    RuntimeSaveAnimIcon animIcon = RuntimeSaveAnimIcons.TryGetValue(targetKey, out RuntimeSaveAnimIcon currentAnimIcon)
+                        ? currentAnimIcon
+                        : RuntimeSaveAnimIcon.Check;
+                    using(new GUIColorScoop(Color.green))
+                    {
+                        GUI.DrawTexture(iconRect, animIcon == RuntimeSaveAnimIcon.Trash ? _trashIconTexture : _checkIconTexture, ScaleMode.ScaleToFit, true);
+                    }
+                    // GUI.color = prevColor;
+
+                    if (GUI.Button(useRect, GUIContent.none, GUIStyle.none))
+                    {
+                        SaveRuntimeComponents(targets, targetKey);
+                    }
+
+                    if (Event.current.type == EventType.Repaint)
+                    {
+                        EditorApplication.delayCall += () =>
+                        {
+                            if (EditorWindow.focusedWindow != null)
+                            {
+                                EditorWindow.focusedWindow.Repaint();
+                            }
+                            InternalEditorUtility.RepaintAllViews();
+                        };
+                    }
+                }
+                else
+                {
+                    SaveCheckAnimEndTime.Remove(targetKey);
+                    RuntimeSaveAnimIcons.Remove(targetKey);
+
+                    GUIContent content = new GUIContent(_saveIconTexture)
+                    {
+                        tooltip = "Save",
+                    };
+
+                    using EditorGUI.ChangeCheckScope change = new EditorGUI.ChangeCheckScope();
+                    GUI.Toggle(
+                        useRect,
+                        false,
+                        content,
+                        CacheAndUtil.GetIconButtonStyle()
+                    );
+                    if (change.changed)
+                    {
+                        SaveRuntimeComponents(targets, targetKey);
+                        InternalEditorUtility.RepaintAllViews();
+                    }
+                }
+
+                // DrawRuntimeSaveIcon(rectangle, targets);
+            }
 
             if (renderTargetInfos.Count == 0)
             {

@@ -8,7 +8,6 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UIElements;
-using UnityEngine.Windows;
 using Object = UnityEngine.Object;
 
 namespace SaintsField.Editor.Utils.SaintsObjectPickerWindow
@@ -113,7 +112,9 @@ namespace SaintsField.Editor.Utils.SaintsObjectPickerWindow
 
         public static readonly ObjectBaseInfo NoneObjectInfo = new ObjectBaseInfo(null, "None", "", "");
 
+        [NonSerialized]
         public List<ObjectInfo> SceneObjects = new List<ObjectInfo>();
+        [NonSerialized]
         public List<ObjectInfo> AssetsObjects = new List<ObjectInfo>();
 
         private VisualTreeAsset _listItemAsset;
@@ -218,7 +219,7 @@ namespace SaintsField.Editor.Utils.SaintsObjectPickerWindow
 
             _loadingImage = rootVisualElement.Q<Image>(name: "saints-field-object-picker-loading");
             _loadingImage.image = Util.LoadResource<Texture2D>("refresh.png");
-            UIToolkitUtils.KeepRotate(_loadingImage);
+            UIToolkitUtils.SetKeepRotate(_loadingImage);
             _loadingImage.schedule.Execute(() => UIToolkitUtils.TriggerRotate(_loadingImage)).StartingIn(300);
 
             _pickerBody = rootVisualElement.Q<VisualElement>("saints-field-object-picker-body");

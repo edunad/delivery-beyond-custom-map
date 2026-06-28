@@ -1,10 +1,11 @@
-#if UNITY_2021_3_OR_NEWER
+#if UNITY_2021_3_OR_NEWER && !SAINTSFIELD_UI_TOOLKIT_DISABLE
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using SaintsField.Editor.Drawers.AdvancedDropdownDrawer;
+using SaintsField.Editor.Drawers.TreeDropdownDrawer;
 using SaintsField.Editor.Utils;
 using SaintsField.Interfaces;
 using UnityEditor;
@@ -321,7 +322,13 @@ namespace SaintsField.Editor.Drawers.Addressable.AddressableResourceDrawer
                 }
                 genericDropdownMenu.AddSeparator("");
                 genericDropdownMenu.AddItem("Edit Groups...", false, AddressableUtil.OpenGroupEditor);
-                genericDropdownMenu.DropDown(groupDown.ButtonElement.worldBound, groupDown, true);
+                genericDropdownMenu.DropDown(groupDown.ButtonElement.worldBound, groupDown,
+#if UNITY_6000_3_OR_NEWER
+                    DropdownMenuSizeMode.Auto
+#else
+                    true
+#endif
+                );
             };
 
             UIToolkitUtils.DropdownButtonField labelDown = container.Q<UIToolkitUtils.DropdownButtonField>(LabelDownName(property));
@@ -367,26 +374,28 @@ namespace SaintsField.Editor.Drawers.Addressable.AddressableResourceDrawer
                     maxHeight = 100;
                 }
 
-                UnityEditor.PopupWindow.Show(worldBound, new SaintsAdvancedDropdownUIToolkit(
+                UnityEditor.PopupWindow.Show(worldBound, new SaintsTreeDropdownUIToolkit(
                     dropdownMetaInfo,
                     labelDown.worldBound.width,
                     maxHeight,
                     true,
-                    (_, curItem) =>
+                    (curItem, isOn) =>
                     {
                         string selectedValue = (string)curItem;
+                        string[] currentData = (string[])labelDown.userData;
                         if (selectedValue == "")
                         {
                             AddressableUtil.OpenLabelEditor();
-                            return;
+                            return currentData.Cast<object>().ToArray();
                         }
 
-                        string[] newData = Array.IndexOf(curValues, selectedValue) == -1
-                            ? curValues.Append(selectedValue).ToArray()
-                            : curValues.Where(each => each != selectedValue).ToArray();
+                        string[] newData = isOn
+                            ? currentData.Append(selectedValue).Distinct().ToArray()
+                            : currentData.Where(each => each != selectedValue).ToArray();
 
                         labelDown.userData = newData;
                         labelDown.ButtonLabelElement.text = newData.Length == 0 ? "" : string.Join(",", newData);
+                        return newData.Cast<object>().ToArray();
                     }
                 ));
             };
@@ -415,7 +424,13 @@ namespace SaintsField.Editor.Drawers.Addressable.AddressableResourceDrawer
                         nameInput.value = GetObjectName(nameType, curObj);
                     });
                 }
-                genericDropdownMenu.DropDown(nameInputContainer.worldBound, nameInputContainer, true);
+                genericDropdownMenu.DropDown(nameInputContainer.worldBound, nameInputContainer,
+#if UNITY_6000_3_OR_NEWER
+                    DropdownMenuSizeMode.Auto
+#else
+                    true
+#endif
+                );
             };
 
             objField.RegisterValueChangedCallback(evt =>

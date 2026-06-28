@@ -1,11 +1,7 @@
 #if UNITY_2021_3_OR_NEWER
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using SaintsField.Editor.Drawers.AdvancedDropdownDrawer;
-using SaintsField.Editor.Drawers.SceneDrawer;
-using SaintsField.Editor.UIToolkitElements;
 using SaintsField.Editor.Utils;
 using SaintsField.Interfaces;
 using UnityEditor;
@@ -150,14 +146,14 @@ namespace SaintsField.Editor.Drawers.SortingLayerDrawer
                     {
                         // ReSharper disable once InvertIf
                         if (sortingLayer.name == clipboardText
-                            || canBeInt && sortingLayer.value == clipboardInt)
+                            || canBeInt && sortingLayer.id == clipboardInt)
                         {
-                            evt.menu.AppendAction($"Paste \"{sortingLayer.name}\"({sortingLayer.value})", _ =>
+                            evt.menu.AppendAction($"Paste \"{sortingLayer.name}\"({sortingLayer.id})", _ =>
                             {
-                                property.intValue = sortingLayer.value;
-                                ReflectUtils.SetValue(property.propertyPath, property.serializedObject.targetObject, info, parent, sortingLayer.value);
+                                property.intValue = sortingLayer.id;
+                                ReflectUtils.SetValue(property.propertyPath, property.serializedObject.targetObject, info, parent, sortingLayer.id);
                                 property.serializedObject.ApplyModifiedProperties();
-                                onValueChangedCallback.Invoke(sortingLayer.value);
+                                onValueChangedCallback.Invoke(sortingLayer.id);
                             });
                             return;
                         }
@@ -166,91 +162,6 @@ namespace SaintsField.Editor.Drawers.SortingLayerDrawer
             }));
         }
 
-        private static void MakeDropdown(SerializedProperty property, VisualElement root, Action<object> onValueChangedCallback, FieldInfo info, object parent)
-        {
-            bool isString = property.propertyType == SerializedPropertyType.String;
-            AdvancedDropdownList<(string path, int index)> dropdown = new AdvancedDropdownList<(string path, int index)>();
-            if (isString)
-            {
-                dropdown.Add("[Empty String]", (string.Empty, -1));
-                dropdown.AddSeparator();
-            }
-
-            string selectedName = null;
-            int selectedIndex = -1;
-            foreach (SortingLayer sortingLayer in SortingLayer.layers)
-            {
-                // dropdown.Add(path, (path, index));
-                dropdown.Add(new AdvancedDropdownList<(string path, int index)>($"<color=#808080>{sortingLayer.value}</color> {sortingLayer.name}", (sortingLayer.name, sortingLayer.value)));
-                // ReSharper disable once InvertIf
-                if (isString && sortingLayer.name == property.stringValue
-                    || !isString && sortingLayer.value == property.intValue)
-                {
-                    selectedName = sortingLayer.name;
-                    selectedIndex = sortingLayer.value;
-                }
-            }
-
-            dropdown.AddSeparator();
-            dropdown.Add("Edit Scenes In Build...", ("", -2), false, "d_editicon.sml");
-
-            AdvancedDropdownMetaInfo metaInfo = new AdvancedDropdownMetaInfo
-            {
-                CurValues = selectedIndex >= 0 ? new object[] { (selectedName, selectedIndex) } : Array.Empty<object>(),
-                DropdownListValue = dropdown,
-                SelectStacks = Array.Empty<AdvancedDropdownAttributeDrawer.SelectStack>(),
-            };
-
-            (Rect worldBound, float maxHeight) = SaintsAdvancedDropdownUIToolkit.GetProperPos(root.worldBound);
-
-            SaintsAdvancedDropdownUIToolkit sa = new SaintsAdvancedDropdownUIToolkit(
-                metaInfo,
-                root.worldBound.width,
-                maxHeight,
-                false,
-                (_, curItem) =>
-                {
-                    (string path, int index) = ((string path, int index))curItem;
-                    switch (index)
-                    {
-                        case -1:
-                        {
-                            Debug.Assert(isString);
-                            property.stringValue = "";
-                            ReflectUtils.SetValue(property.propertyPath, property.serializedObject.targetObject, info, parent, "");
-                            property.serializedObject.ApplyModifiedProperties();
-                            onValueChangedCallback.Invoke("");
-                        }
-                            break;
-                        case -2:
-                        {
-                            SceneUtils.OpenBuildSettings();
-                        }
-                            break;
-                        default:
-                        {
-                            if (isString)
-                            {
-                                property.stringValue = path;
-                                ReflectUtils.SetValue(property.propertyPath, property.serializedObject.targetObject, info, parent, path);
-                                property.serializedObject.ApplyModifiedProperties();
-                                onValueChangedCallback.Invoke(path);
-                            }
-                            else
-                            {
-                                property.intValue = index;
-                                ReflectUtils.SetValue(property.propertyPath, property.serializedObject.targetObject, info, parent, index);
-                                property.serializedObject.ApplyModifiedProperties();
-                                onValueChangedCallback.Invoke(index);
-                            }
-                        }
-                            break;
-                    }
-                }
-            );
-
-            UnityEditor.PopupWindow.Show(worldBound, sa);
-        }
 
         public static VisualElement UIToolkitValueEditString(VisualElement oldElement, SortingLayerAttribute sortingLayerAttribute, string label, string value, Action<object> beforeSet, Action<object> setterOrNull, bool labelGrayColor, bool inHorizontalLayout, IReadOnlyList<Attribute> allAttributes)
         {
@@ -270,7 +181,7 @@ namespace SaintsField.Editor.Drawers.SortingLayerDrawer
                     value = value,
                 };
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(element, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(element, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -302,7 +213,7 @@ namespace SaintsField.Editor.Drawers.SortingLayerDrawer
                     value = value,
                 };
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(element, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(element, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)

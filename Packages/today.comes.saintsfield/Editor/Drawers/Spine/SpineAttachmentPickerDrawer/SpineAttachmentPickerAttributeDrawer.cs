@@ -119,7 +119,7 @@ namespace SaintsField.Editor.Drawers.Spine.SpineAttachmentPickerDrawer
                 string currentSkinName;
                 if (spineAttachmentPickerAttribute.SkinTargetIsCallback)
                 {
-                    (string error, string result) skinFilter = Util.GetOf<string>(spineAttachmentPickerAttribute.SkinTarget, null, property, info, parent, null);
+                    (string error, MemberInfo _, string result) skinFilter = Util.GetOf<string>(spineAttachmentPickerAttribute.SkinTarget, null, property, info, parent, null);
                     if (skinFilter.error != "")
                     {
                         return new SpineAttachmentUtils.AttachmentsResult(skinFilter.error, null, null);
@@ -153,7 +153,7 @@ namespace SaintsField.Editor.Drawers.Spine.SpineAttachmentPickerDrawer
             string currentSlotName;
             if (spineAttachmentPickerAttribute.SlotTargetIsCallback)
             {
-                (string error, string result) slotFilter = Util.GetOf<string>(spineAttachmentPickerAttribute.SlotTarget, null, property, info, parent, null);
+                (string error, MemberInfo _, string result) slotFilter = Util.GetOf<string>(spineAttachmentPickerAttribute.SlotTarget, null, property, info, parent, null);
                 if (slotFilter.error != "")
                 {
                     return new SpineAttachmentUtils.AttachmentsResult(slotFilter.error, null, null);
@@ -187,25 +187,13 @@ namespace SaintsField.Editor.Drawers.Spine.SpineAttachmentPickerDrawer
 
                     List<Skin.SkinEntry> skinEntries = new List<Skin.SkinEntry>();
                     skin.GetAttachments(slotIndex, skinEntries);
-                    attachmentNames.AddRange(skinEntries.Select(entry => new AttachInfo
-                    {
-                        Name = entry.Name,
-                        Attachment = entry.Attachment,
-                    }));
+                    attachmentNames.AddRange(skinEntries.Select(SkinEntityToAttachInfo));
 
                     if (skin != defaultSkin) {
-                        placeholderNames.AddRange(skinEntries.Select(entry => new AttachInfo
-                        {
-                            Name = entry.Name,
-                            Attachment = entry.Attachment,
-                        }));
+                        placeholderNames.AddRange(skinEntries.Select(SkinEntityToAttachInfo));
                         skinEntries.Clear();
                         defaultSkin.GetAttachments(slotIndex, skinEntries);
-                        attachmentNames.AddRange(skinEntries.Select(entry => new AttachInfo
-                        {
-                            Name = entry.Name,
-                            Attachment = entry.Attachment,
-                        }));
+                        attachmentNames.AddRange(skinEntries.Select(SkinEntityToAttachInfo));
                     }
 
                     foreach (AttachInfo attachInfo in attachmentNames)
@@ -236,6 +224,18 @@ namespace SaintsField.Editor.Drawers.Spine.SpineAttachmentPickerDrawer
             return new SpineAttachmentUtils.AttachmentsResult(error, targetName, attachmentInfos);
         }
 
+        private static AttachInfo SkinEntityToAttachInfo(Skin.SkinEntry entry) => new AttachInfo
+        {
+            Name = entry.
+#if SAINTSFIELD_SPINE_UNITY_4_3_0_OR_NEWER
+                Placeholder
+#else
+                Name
+#endif
+            ,
+            Attachment = entry.Attachment,
+        };
+
         private static string GetIconPathFromAttachment(Attachment attachment)
         {
             // ReSharper disable once ConvertSwitchStatementToSwitchExpression
@@ -260,8 +260,8 @@ namespace SaintsField.Editor.Drawers.Spine.SpineAttachmentPickerDrawer
 
         private static AdvancedDropdownMetaInfo GetMetaInfo(string curValue, SpineAttachmentUtils.AttachmentsResult attachmentsResult, bool subAsSep)
         {
-            AdvancedDropdownList<string> dropdownListValue =
-                new AdvancedDropdownList<string>(attachmentsResult.TargetName)
+            Dropdown<string> dropdownListValue =
+                new Dropdown<string>(attachmentsResult.TargetName)
                 {
                     { "[Empty String]", "" },
                 };
@@ -278,7 +278,7 @@ namespace SaintsField.Editor.Drawers.Spine.SpineAttachmentPickerDrawer
                 }
                 else
                 {
-                    dropdownListValue.Add(new AdvancedDropdownList<string>(attachmentInfo.Path, attachmentInfo.Name, icon: attachmentInfo.Icon, disabled: attachmentInfo.Disabled));
+                    dropdownListValue.Add(new Dropdown<string>(attachmentInfo.Path, attachmentInfo.Name, icon: attachmentInfo.Icon, disabled: attachmentInfo.Disabled));
                 }
             }
 

@@ -5,6 +5,7 @@ using System.Reflection;
 using SaintsField.Editor.Core;
 using SaintsField.Editor.Utils;
 using SaintsField.Interfaces;
+using SaintsField.Utils;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,20 +13,37 @@ namespace SaintsField.Editor.Drawers.OverlayRichLabelDrawer
 {
     public partial class OverlayRichLabelAttributeDrawer
     {
-        private readonly RichTextDrawer _richTextDrawer = new RichTextDrawer();
-
-        protected override void ImGuiOnDispose()
+        private class ImGuiInfo
         {
-            base.ImGuiOnDispose();
-            _richTextDrawer.Dispose();
+            public string Error = "";
         }
 
-        private string _error = "";
+        private static readonly Dictionary<string, ImGuiInfo> ImGuiInfos = new Dictionary<string, ImGuiInfo>();
+
+        private static ImGuiInfo EnsureKey(SerializedProperty property)
+        {
+            string key = SerializedUtils.GetUniqueId(property);
+            if (ImGuiInfos.TryGetValue(key, out ImGuiInfo info))
+            {
+                return info;
+            }
+
+            NoLongerInspectingWatch(property.serializedObject.targetObject, key, () =>
+            {
+                ImGuiInfos.Remove(key);
+            });
+
+            return ImGuiInfos[key] = new ImGuiInfo();
+        }
+
+        private readonly RichTextDrawer _richTextDrawer = new RichTextDrawer();
 
         protected override bool DrawOverlay(Rect position, SerializedProperty property,
             GUIContent label,
             ISaintsAttribute saintsAttribute, bool hasLabel, FieldInfo info, object parent)
         {
+            ImGuiInfo cacheInfo = EnsureKey(property);
+            cacheInfo.Error = "";
             string inputContent = GetContent(property);
             if (inputContent == null) // null=error
             {
@@ -38,7 +56,7 @@ namespace SaintsField.Editor.Drawers.OverlayRichLabelDrawer
             (string error, string labelXml) = RichTextDrawer.GetLabelXml(property, targetAttribute.RichTextXml,
                 targetAttribute.IsCallback, info, parent);
 
-            _error = error;
+            cacheInfo.Error = error;
 
             if (labelXml is null)
             {
@@ -48,7 +66,7 @@ namespace SaintsField.Editor.Drawers.OverlayRichLabelDrawer
             float labelWidth = hasLabel ? EditorGUIUtility.labelWidth : 0;
 
             RichTextDrawer.RichTextChunk[] payloads =
-                RichTextDrawer.ParseRichXml(labelXml, label.text, property, info, parent).ToArray();
+                RichTextDrawer.ParseRichXmlWithProvider(labelXml, this).ToArray();
             float overlayWidth = _richTextDrawer.GetWidth(label, position.height, payloads);
 
             float leftWidth = position.width - labelWidth - contentWidth;
@@ -64,8 +82,7 @@ namespace SaintsField.Editor.Drawers.OverlayRichLabelDrawer
                 width = useWidth,
             };
 
-            ImGuiEnsureDispose(property.serializedObject.targetObject);
-            _richTextDrawer.DrawChunks(overlayRect, label, payloads);
+            _richTextDrawer.DrawChunks(overlayRect, payloads);
 
             return true;
         }
@@ -99,30 +116,23 @@ namespace SaintsField.Editor.Drawers.OverlayRichLabelDrawer
             FieldInfo info,
             object parent)
         {
-            SerializedPropertyType propType = property.propertyType;
-            bool notOk = propType != SerializedPropertyType.Integer && propType != SerializedPropertyType.Float &&
-                         propType != SerializedPropertyType.String;
-            if (notOk)
-            {
-                _error = $"Expect int/float/string, get {propType}";
-            }
-
-            return notOk;
+            return EnsureKey(property).Error != "";
         }
 
         protected override float GetBelowExtraHeight(SerializedProperty property, GUIContent label, float width,
             IReadOnlyList<PropertyAttribute> allAttributes,
             ISaintsAttribute saintsAttribute, int index, FieldInfo info, object parent)
         {
-            return _error == "" ? 0 : ImGuiHelpBox.GetHeight(_error, width, MessageType.Error);
+            string error = EnsureKey(property).Error;
+            return error == "" ? 0 : ImGuiHelpBox.GetHeight(error, width, MessageType.Error);
         }
 
         protected override Rect DrawBelow(Rect position, SerializedProperty property, GUIContent label,
             ISaintsAttribute saintsAttribute, int index, IReadOnlyList<PropertyAttribute> allAttributes,
-            OnGUIPayload onGuiPayload, FieldInfo info, object parent) =>
-            _error == ""
+            FieldInfo info, object parent) =>
+            EnsureKey(property).Error == ""
                 ? position
-                : ImGuiHelpBox.Draw(position, _error, MessageType.Error);
+                : ImGuiHelpBox.Draw(position, EnsureKey(property).Error, MessageType.Error);
 
     }
 }

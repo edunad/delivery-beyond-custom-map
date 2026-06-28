@@ -11,18 +11,20 @@ namespace SaintsField.Editor.Drawers.TagDrawer
     {
         protected override float GetFieldHeight(SerializedProperty property, GUIContent label,
             float width,
+            int index,
             ISaintsAttribute saintsAttribute, FieldInfo info, bool hasLabelWidth, object parent)
         {
             return EditorGUIUtility.singleLineHeight;
         }
 
         protected override void DrawField(Rect position, SerializedProperty property, GUIContent label,
-            ISaintsAttribute saintsAttribute, IReadOnlyList<PropertyAttribute> allAttributes, OnGUIPayload onGUIPayload,
+            ISaintsAttribute saintsAttribute, IReadOnlyList<PropertyAttribute> allAttributes,
             FieldInfo info, object parent)
         {
             if (property.propertyType != SerializedPropertyType.String)
             {
-                DefaultDrawer(position, property, label, info);
+                RawDefaultDrawer(position, property, allAttributes, label, info);
+                DrawOverrideRichText(position, label, overrideRichTextChunks);
                 return;
             }
 
@@ -30,6 +32,7 @@ namespace SaintsField.Editor.Drawers.TagDrawer
             using (EditorGUI.ChangeCheckScope changed = new EditorGUI.ChangeCheckScope())
             {
                 string result = EditorGUI.TagField(position, label, property.stringValue);
+                DrawOverrideRichText(position, label, overrideRichTextChunks);
                 if (changed.changed)
                 {
                     property.stringValue = result;
@@ -52,7 +55,7 @@ namespace SaintsField.Editor.Drawers.TagDrawer
 
         protected override Rect DrawBelow(Rect position, SerializedProperty property, GUIContent label,
             ISaintsAttribute saintsAttribute, int index, IReadOnlyList<PropertyAttribute> allAttributes,
-            OnGUIPayload onGuiPayload, FieldInfo info, object parent) => ImGuiHelpBox.Draw(position,
+            FieldInfo info, object parent) => ImGuiHelpBox.Draw(position,
             $"Expect string, get {property.propertyType}", MessageType.Error);
     }
 }

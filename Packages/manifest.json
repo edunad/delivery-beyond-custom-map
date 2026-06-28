@@ -5,7 +5,7 @@
     "com.failcake.vis.occlusion": "https://github.com/edunad/FailCake.VISOcclusion.git?path=/com.failcake.vis.occlusion",
     "com.failcake.vmf.importer": "https://github.com/edunad/FailCake.VMFImporter.git?path=/com.failcake.vmf.importer",
     "com.github-glitchenzo.nugetforunity": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
-    "com.unity.ide.rider": "3.0.39",
+    "com.unity.ide.rider": "3.0.40",
     "com.unity.inputsystem": "1.19.0",
     "com.unity.netcode.gameobjects": "https://github.com/Unity-Technologies/com.unity.netcode.gameobjects.git?path=com.unity.netcode.gameobjects#develop-2.0.0",
     "com.unity.render-pipelines.universal": "17.4.0",

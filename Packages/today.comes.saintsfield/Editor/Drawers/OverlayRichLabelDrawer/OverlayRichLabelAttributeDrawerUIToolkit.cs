@@ -1,4 +1,4 @@
-#if UNITY_2021_3_OR_NEWER
+#if UNITY_2021_3_OR_NEWER && !SAINTSFIELD_UI_TOOLKIT_DISABLE
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -240,7 +240,7 @@ namespace SaintsField.Editor.Drawers.OverlayRichLabelDrawer
                 }
 
                 foreach (VisualElement visualElement in _richTextDrawer.DrawChunksUIToolKit(
-                             RichTextDrawer.ParseRichXml(xml, property.displayName, property, info, parent)))
+                             RichTextDrawer.ParseRichXmlWithProvider(xml, this)))
                 {
                     // Debug.Log(visualElement);
                     visualElement.AddToClassList(ClassRichLabelElement(property, index));

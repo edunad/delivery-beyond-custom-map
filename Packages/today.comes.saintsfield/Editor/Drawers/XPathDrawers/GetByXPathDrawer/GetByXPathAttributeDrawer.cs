@@ -5,6 +5,7 @@ using System.Reflection;
 using SaintsField.Editor.Core;
 using SaintsField.Editor.Linq;
 using SaintsField.Editor.Utils;
+using SaintsField.SaintsSerialization;
 using SaintsField.Utils;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -28,6 +29,39 @@ namespace SaintsField.Editor.Drawers.XPathDrawers.GetByXPathDrawer
     [CustomPropertyDrawer(typeof(FindComponentAttribute), true)]
     public partial class GetByXPathAttributeDrawer: SaintsPropertyDrawer
     {
+        public class PropertyCache
+        {
+            public string Error;
+            public bool MisMatch;
+            public object OriginalValue;
+            public object TargetValue;
+            public bool TargetIsNull;
+
+            public MemberInfo MemberInfo;
+            public object Parent;
+            public SerializedProperty SerializedProperty;
+        }
+
+        public class GetByXPathGenericCache
+        {
+            public double UpdateResourceAfterTime;
+            public string Error;
+
+            public object Parent;
+            public Type ExpectedType;
+            public Type ExpectedInterface;
+
+            public IReadOnlyList<GetByXPathAttribute> GetByXPathAttributes;
+            public IReadOnlyList<object> CachedResults;
+
+            public SerializedProperty ArrayProperty;
+
+            public readonly Dictionary<int, PropertyCache> IndexToPropertyCache = new Dictionary<int, PropertyCache>();
+        }
+
+        public static readonly Dictionary<string, GetByXPathGenericCache> SharedCache =
+            new Dictionary<string, GetByXPathGenericCache>();
+
         private static (bool hasRoot, GameObject prefabRoot) GetPrefabRoot()
         {
 #if UNITY_2021_3_OR_NEWER
@@ -155,10 +189,12 @@ namespace SaintsField.Editor.Drawers.XPathDrawers.GetByXPathDrawer
                 ? ReflectUtils.GetElementType(targetType)
                 : targetType;
 
-            // Debug.Log($"targetType={targetType}, rawType={rawType}");
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_GET_BY_XPATH
+            Debug.Log($"targetType={targetType}, rawType={rawType}");
+#endif
             if (!typeof(IWrapProp).IsAssignableFrom(rawType))
             {
-                return ("", rawType, GetInterface(rawType));
+                return ("", rawType, GetInterface(rawType, property, info));
             }
 
             // Debug.Log($"Raw Type: {rawType}");
@@ -169,13 +205,99 @@ namespace SaintsField.Editor.Drawers.XPathDrawers.GetByXPathDrawer
                 return ($"Failed to get wrap type from {property.propertyPath}", null, null);
             }
 
-            return ("", wrapType, GetInterface(rawType));
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_GET_BY_XPATH
+            Debug.Log($"wrapType={wrapType}, property={property.propertyPath}");
+#endif
+
+            return ("", wrapType, GetInterface(rawType, property, info));
         }
 
-        private static Type GetInterface(Type rawType)
+        private static Type GetInterface(Type rawType, SerializedProperty property, MemberInfo info)
+        {
+            string propertyPath = property.propertyPath;
+            (bool _, string[] propPathSegs) = SerializedUtils.TrimEndArray(propertyPath.Split('.'));
+
+            // ReSharper disable once InvertIf
+            if (propPathSegs.Length > 0 && propPathSegs[^1].EndsWith(Util.SaintsSerializedVarSuffix))
+            {
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_GET_BY_XPATH
+                Debug.Log($"checking {Util.SaintsSerializedVarSuffix}");
+#endif
+                SaintsSerializedActualAttribute actualAttribute = ReflectCache
+                    .GetCustomAttributes<SaintsSerializedActualAttribute>(info)
+                    .FirstOrDefault();
+
+                // ReSharper disable once InvertIf
+                if (actualAttribute != null)
+                {
+                    string actualField = actualAttribute.Name;
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_GET_BY_XPATH
+                    Debug.Log($"checking {actualField} target");
+#endif
+                    (SerializedUtils.FieldOrProp _, object parent) = SerializedUtils.GetFieldInfoAndDirectParent(property);
+                    // ReSharper disable once InvertIf
+                    if (parent != null)
+                    {
+                        bool inArray = SerializedUtils.IsArrayOrDirectlyInsideArray(property);
+
+                        // Note: target will NEVER be a parent field. We need not to process base types there
+                        Type parentType = parent.GetType();
+                        FieldInfo targetFieldInfo = parentType.GetField(actualField, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_GET_BY_XPATH
+                        Debug.Log($"checking targetFieldInfo={targetFieldInfo}");
+#endif
+
+                        Type wrapTargetType = null;
+                        if (targetFieldInfo != null)
+                        {
+                            wrapTargetType = targetFieldInfo.FieldType;
+                        }
+                        else
+                        {
+                            PropertyInfo targetPropertyInfo = parentType.GetProperty(actualField,
+                                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                            if (targetPropertyInfo != null)
+                            {
+                                wrapTargetType = targetPropertyInfo.PropertyType;
+                            }
+                        }
+
+                        // ReSharper disable once InvertIf
+                        if (wrapTargetType != null)
+                        {
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_GET_BY_XPATH
+                            Debug.Log($"checking wrapTargetType={wrapTargetType}, inArray={inArray}");
+#endif
+                            if (inArray)
+                            {
+                                wrapTargetType = ReflectUtils.GetElementType(wrapTargetType);
+
+
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_GET_BY_XPATH
+                                Debug.Log($"checking unpack array wrapTargetType={wrapTargetType}");
+#endif
+                            }
+
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_GET_BY_XPATH
+                            Debug.Log($"checking wrapTargetType.IsInterface={wrapTargetType}/{wrapTargetType.IsInterface}");
+#endif
+                            if (wrapTargetType.IsInterface)
+                            {
+                                return wrapTargetType;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return GetInterfaceFromRawType(rawType);
+        }
+
+        private static Type GetInterfaceFromRawType(Type rawType)
         {
             Type mostBaseType = ReflectUtils.GetMostBaseType(rawType);
-            if(ReflectUtils.IsSubclassOfRawGeneric(typeof(SaintsInterface<,>), mostBaseType))
+            if (ReflectUtils.IsSubclassOfRawGeneric(typeof(SaintsInterface<,>), mostBaseType))
             {
                 return mostBaseType.GetGenericArguments()[1];
             }
@@ -699,6 +821,9 @@ namespace SaintsField.Editor.Drawers.XPathDrawers.GetByXPathDrawer
                     parent);
 
                 expandedResults = iterResults.Results.ToArray();
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_GET_BY_XPATH
+                Debug.Log($"#GetByXPath# expandedResults={expandedResults.Count}/{string.Join(", ", expandedResults)}");
+#endif
                 target.CachedResults = expandedResults;
                 // target.ImGuiResourcesLastTime = EditorApplication.timeSinceStartup;
             }

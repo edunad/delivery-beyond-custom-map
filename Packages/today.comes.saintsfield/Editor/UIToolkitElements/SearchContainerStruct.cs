@@ -1,3 +1,4 @@
+#if UNITY_2021_3_OR_NEWER
 using SaintsField.Editor.Utils;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
@@ -30,7 +31,7 @@ namespace SaintsField.Editor.UIToolkitElements
 
             VisualElement loadingImage = root.Q<VisualElement>(name: "LoadingIcon");
             loadingImage.style.visibility = Visibility.Hidden;
-            UIToolkitUtils.KeepRotate(loadingImage);
+            UIToolkitUtils.SetKeepRotate(loadingImage);
             loadingImage.RegisterCallback<AttachToPanelEvent>(_ =>
             {
                 loadingImage.schedule.Execute(() => UIToolkitUtils.TriggerRotate(loadingImage));
@@ -40,3 +41,4 @@ namespace SaintsField.Editor.UIToolkitElements
         }
     }
 }
+#endif

@@ -41,6 +41,7 @@ namespace SaintsField.Editor.Drawers.Spine.SpineSlotPickerDrawer
 
         protected override float GetFieldHeight(SerializedProperty property, GUIContent label,
             float width,
+            int index,
             ISaintsAttribute saintsAttribute,
             FieldInfo info,
             bool hasLabelWidth, object parent)
@@ -51,19 +52,24 @@ namespace SaintsField.Editor.Drawers.Spine.SpineSlotPickerDrawer
         private static Texture2D _iconSkin;
 
         protected override void DrawField(Rect position, SerializedProperty property, GUIContent label,
-            ISaintsAttribute saintsAttribute, IReadOnlyList<PropertyAttribute> allAttributes, OnGUIPayload onGUIPayload,
+            ISaintsAttribute saintsAttribute, IReadOnlyList<PropertyAttribute> allAttributes,
             FieldInfo info, object parent)
         {
             CachedImGui cached = EnsureCache(property);
             if (cached.Changed)
             {
                 cached.Changed = false;
-                onGUIPayload.SetValue(cached.ChangedValue);
+                TriggerChangedIMGUI(property, cached.ChangedValue);
             }
 
             #region Dropdown
 
             Rect leftRect = EditorGUI.PrefixLabel(position, label);
+            Rect labelRect = new Rect(position)
+            {
+                width = position.width - leftRect.width,
+            };
+            DrawOverrideRichText(labelRect, label, overrideRichTextChunks);
 
             // ReSharper disable once ConvertIfStatementToNullCoalescingAssignment
             if (_iconSkin is null)
@@ -133,7 +139,7 @@ namespace SaintsField.Editor.Drawers.Spine.SpineSlotPickerDrawer
 
         protected override Rect DrawBelow(Rect position, SerializedProperty property, GUIContent label,
             ISaintsAttribute saintsAttribute, int index, IReadOnlyList<PropertyAttribute> allAttributes,
-            OnGUIPayload onGuiPayload, FieldInfo info, object parent)
+            FieldInfo info, object parent)
         {
             string error = EnsureCache(property).Error;
             return error == "" ? position : ImGuiHelpBox.Draw(position, error, MessageType.Error);

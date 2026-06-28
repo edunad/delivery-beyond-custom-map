@@ -1,7 +1,8 @@
-#if UNITY_2021_3_OR_NEWER
+#if UNITY_2021_3_OR_NEWER && !SAINTSFIELD_UI_TOOLKIT_DISABLE
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using SaintsField.Editor.Core;
 using SaintsField.Editor.Utils;
 using SaintsField.Interfaces;
 using UnityEditor;
@@ -41,41 +42,32 @@ namespace SaintsField.Editor.Drawers.MaxValueDrawer
             HelpBox helpBox = container.Q<HelpBox>(NameHelpBox(property, index));
             MaxValueAttribute maxValueAttribute = (MaxValueAttribute)saintsAttribute;
 
-            TrackValue(property, maxValueAttribute, helpBox, onValueChangedCallback, info, parent);
-            helpBox.TrackPropertyValue(property, _ => TrackValue(property, maxValueAttribute, helpBox, onValueChangedCallback, info, parent));
-            helpBox.RegisterCallback<DetachFromPanelEvent>(_ => UIToolkitUtils.Unbind(helpBox));
-        }
-
-        private static void TrackValue(SerializedProperty property, MaxValueAttribute maxValueAttribute,
-            HelpBox helpBox, Action<object> onValueChangedCallback, FieldInfo info, object parent)
-        {
-            (string error, float valueLimit) = GetLimitFloat(property, maxValueAttribute, info, parent);
-
-            if (helpBox.text != error)
+            Refresh();
+            helpBox.TrackPropertyValue(property, _ => Refresh());
+            SaintsEditorApplicationChanged.OnAnyEvent.AddListener(Refresh);
+            helpBox.RegisterCallback<DetachFromPanelEvent>(_ =>
             {
-                helpBox.style.display = error == "" ? DisplayStyle.None : DisplayStyle.Flex;
-                helpBox.text = error;
-            }
+                SaintsEditorApplicationChanged.OnAnyEvent.RemoveListener(Refresh);
+                UIToolkitUtils.Unbind(helpBox);
+            });
+            return;
 
-            if (error != "")
+            void Refresh()
             {
-                return;
-            }
+                if (!SerializedUtils.IsOk(property))
+                {
+                    return;
+                }
 
-            if (property.propertyType == SerializedPropertyType.Float && property.floatValue > valueLimit)
-            {
-                property.floatValue = valueLimit;
-                property.serializedObject.ApplyModifiedProperties();
-                onValueChangedCallback.Invoke(valueLimit);
-            }
-            else if (property.propertyType == SerializedPropertyType.Integer && property.intValue > (int)valueLimit)
-            {
-                property.intValue = (int)valueLimit;
-                property.serializedObject.ApplyModifiedProperties();
-                onValueChangedCallback.Invoke((int)valueLimit);
+                (IReadOnlyList<string> errors, IReadOnlyList<(string message, Action fix)> checkerResults) = CheckPropertyValue(property, maxValueAttribute, onValueChangedCallback, info, parent);
+                foreach ((string _, Action fix)  in checkerResults)
+                {
+                    // fix.Invoke();
+                    helpBox.schedule.Execute(fix);
+                }
+                UIToolkitUtils.SetHelpBox(helpBox, string.Join("\n", errors));
             }
         }
-
     }
 }
 #endif

@@ -1,13 +1,19 @@
-﻿using System;
+﻿#if (WWISE_2030_OR_LATER || WWISE_2029_OR_LATER || WWISE_2028_OR_LATER || WWISE_2027_OR_LATER || WWISE_2026_OR_LATER || WWISE_2025_OR_LATER || WWISE_2024_OR_LATER || WWISE_2023_OR_LATER || WWISE_2022_OR_LATER || WWISE_2021_OR_LATER || WWISE_2020_OR_LATER || WWISE_2019_OR_LATER || WWISE_2018_OR_LATER || WWISE_2017_OR_LATER || WWISE_2016_OR_LATER || SAINTSFIELD_WWISE)
+#define WWISE_INSTALLED
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using SaintsField.Editor.ColorPalette;
+using SaintsField.Editor.TroubleshootEditor;
 #if !SAINTSFIELD_I2_LOC
 using SaintsField.Editor.I2Setup;
 #endif
 using SaintsField.Utils;
 using UnityEditor;
+using UnityEditor.Compilation;
 #if UNITY_2023_1_OR_NEWER
 using UnityEditor.Build;
 #endif
@@ -17,19 +23,55 @@ namespace SaintsField.Editor.Utils
 {
     public static class SaintsMenu
     {
-        private const string MenuRoot =
-#if SAINTSFIELD_DEBUG
-            "Saints/"
+
+        #region SaintsEditor
+
+        // ReSharper disable once InconsistentNaming
+        public const string SAINTSFIELD_SAINTS_EDITOR_APPLY = "SAINTSFIELD_SAINTS_EDITOR_APPLY";
+        private const string SaintsEditorApplyPath = RuntimeUtil.MenuRoot + "Enable SaintsEditor";
+        [MenuItem(SaintsEditorApplyPath, priority = 1)]
+        public static void SaintsEditorApply()
+        {
+#if SAINTSFIELD_SAINTS_EDITOR_APPLY
+            RemoveCompileDefine("SAINTSFIELD_SAINTS_EDITOR_APPLY");
 #else
-            "Window/Saints/"
+            SaintsFieldSetupWindow.Open();
+#endif
+        }
+
+        #region IMGUI Constant Repaint
+        private const string DisableIMGUIConstantRepaintPath = RuntimeUtil.MenuRoot + "Disable IMGUI Constant Repaint";
+        [MenuItem(DisableIMGUIConstantRepaintPath, priority = 2)]
+        public static void DisableIMGUIConstantRepaint()
+        {
+#if SAINTSFIELD_SAINTS_EDITOR_IMGUI_CONSTANT_REPAINT_DISABLE
+            RemoveCompileDefine
+#else
+
+            AddCompileDefine
+#endif
+                ("SAINTSFIELD_SAINTS_EDITOR_IMGUI_CONSTANT_REPAINT_DISABLE");
+        }
+
+        [MenuItem(DisableIMGUIConstantRepaintPath, true)]
+        public static bool DisableIMGUIConstantRepaintValidate() =>
+#if SAINTSFIELD_SAINTS_EDITOR_APPLY
+            true
+#else
+
+            false
 #endif
         ;
 
+        #endregion
 
+// #endif
+
+        #endregion
 
         #region Config
 
-        [MenuItem(MenuRoot + "Create or Edit SaintsField Config")]
+        [MenuItem(RuntimeUtil.MenuRoot + "Edit Config...", priority = 3)]
         private static void CreateOrEditSaintsFieldConfig()
         {
             Selection.activeObject = EnsureCreateSaintsFieldConfig();
@@ -72,168 +114,215 @@ namespace SaintsField.Editor.Utils
 
         #endregion
 
-
-        #region UI Toolkit
-// #if SAINTSFIELD_UI_TOOLKIT_DISABLE
-//         [MenuItem("Window/Saints/Enable UI Toolkit Support")]
-//         public static void UIToolkit() => RemoveCompileDefine("SAINTSFIELD_UI_TOOLKIT_DISABLE");
-// #else
-//         [MenuItem("Window/Saints/Disable UI Toolkit Support")]
-//         public static void UIToolkit() => AddCompileDefine("SAINTSFIELD_UI_TOOLKIT_DISABLE");
-// #endif
-
-        #region IMGUI decorators
-
-#if SAINTSFIELD_IMGUI_DUPLICATE_DECORATOR_FIX
-        [MenuItem("Window/Saints/Disable IMGUI duplicated decorator fix")]
-        public static void ImGuiDuplicateDecoratorFix() => RemoveCompileDefine("SAINTSFIELD_IMGUI_DUPLICATE_DECORATOR_FIX");
-#else
-        [MenuItem("Window/Saints/Enable IMGUI duplicated decorator fix")]
-        public static void ImGuiDuplicateDecoratorFix() => AddCompileDefine("SAINTSFIELD_IMGUI_DUPLICATE_DECORATOR_FIX");
-#endif
-
-        #endregion
-//         #region Label Fix (UI Toolkit)
-// #if !SAINTSFIELD_UI_TOOLKIT_DISABLE
-// #if !SAINTSFIELD_UI_TOOLKIT_LABEL_FIX_DISABLE
-//         [MenuItem("Window/Saints/Disable UI Toolkit Label Fix")]
-//         public static void UIToolkitLabelFix() => AddCompileDefine("SAINTSFIELD_UI_TOOLKIT_LABEL_FIX_DISABLE");
-// #else
-//         [MenuItem("Window/Saints/Enable UI Toolkit Label Fix")]
-//         public static void UIToolkitLabelFix() => RemoveCompileDefine("SAINTSFIELD_UI_TOOLKIT_LABEL_FIX_DISABLE");
-// #endif
-// #endif
-//         #endregion
-
-        #endregion
-
-        #region SaintsEditor
-
-        // ReSharper disable once InconsistentNaming
-        public const string SAINTSFIELD_SAINTS_EDITOR_APPLY = "SAINTSFIELD_SAINTS_EDITOR_APPLY";
-
-// #if SAINTSFIELD_SAINTS_EDITOR_APPLY
-//         [MenuItem(MenuRoot + "SaintsEditor/Disable SaintsEditor")]
-//         public static void SaintsEditorUnapply() => RemoveCompileDefine(SAINTSFIELD_SAINTS_EDITOR_APPLY);
-//
-//         #region IMGUI Constant Repaint
-// #if SAINTSFIELD_SAINTS_EDITOR_IMGUI_CONSTANT_REPAINT_DISABLE
-//         [MenuItemMenuRoot + "SaintsEditor/Enable IMGUI Constant Repaint")]
-//         public static void SaintsEditorIMGUIConstantRepaint() => RemoveCompileDefine("SAINTSFIELD_SAINTS_EDITOR_IMGUI_CONSTANT_REPAINT_DISABLE");
-// #else
-//         [MenuItem(MenuRoot + "SaintsEditor/Disable IMGUI Constant Repaint")]
-//         public static void SaintsEditorIMGUIConstantRepaint() => AddCompileDefine("SAINTSFIELD_SAINTS_EDITOR_IMGUI_CONSTANT_REPAINT_DISABLE");
-// #endif
-//         #endregion
-// #else
-        [MenuItem(MenuRoot + "SaintsEditor...")]
-        public static void ApplySaintsEditor()
+        [MenuItem(RuntimeUtil.MenuRoot + "Troubleshoot...", priority = 4)]
+        private static void Troubleshoot()
         {
-            SaintsFieldSetupWindow.Open();
-            // AddCompileDefine(SAINTSFIELD_SAINTS_EDITOR_APPLY);
+            TroubleshootEditorWindow.Open();
         }
-// #endif
-
-        #endregion
 
         #region DOTween
 
+        // ReSharper disable once InconsistentNaming
+        private const string EnableDOTweenPath = RuntimeUtil.MenuRoot + "Enable DOTween Support";
+        // ReSharper disable once InconsistentNaming
+        [MenuItem(EnableDOTweenPath, priority = 100)]
+        public static void EnableDOTween()
+        {
+            const string enableMarco = "SAINTSFIELD_DOTWEEN_ENABLE";
+#if SAINTSFIELD_DOTWEEN_ENABLE && false
+            RemoveCompileDefine(enableMarco);
+#else
+            // DOTween/Modules/DOTween.Modules.asmdef
+            if(IsDoTweenSetup())
+            {
+                AddCompileDefine(enableMarco);
+            }
+            else
+            {
+                // ReSharper disable once InvertIf
+                if (EditorUtility.DisplayDialog(
+                        "DOTween Modules not enabled",
+                        "You need to setup a DOTween ASMDEF to use this function.\nPlease go Tools/Demigiant/DOTween Utility Panel, click \"Create ASMDEF...\"",
+                        "Open",
+                        "Cancel"))
+                {
+                    if (EditorApplication.ExecuteMenuItem("Tools/Demigiant/DOTween Utility Panel"))
+                    {
+                        return;
+                    }
+
+                    EditorUtility.DisplayDialog(
+                        "DOTween Utility Failed",
+                        "DOTween Utility Panel failed to open. Please manually \"Create ASMDEF...\" for DOTween",
+                        "Close");
+                }
+            }
+#endif
+        }
+
+        private static bool IsDoTweenSetup() => CompilationPipeline
+            .GetAssemblies()
+            .Any(a => a.name == "DOTween.Modules");
+
+        // ReSharper disable once InconsistentNaming
+        [MenuItem(EnableDOTweenPath, true)]
+        public static bool DisableDOTweenValidate() =>
 #if DOTWEEN
-
-#if SAINTSFIELD_DOTWEEN_DISABLED
-        [MenuItem("Window/Saints/Enable DOTween Support")]
-        public static void DOTween() => RemoveCompileDefine("SAINTSFIELD_DOTWEEN_DISABLED");
+            true
 #else
-        [MenuItem("Window/Saints/Disable DOTween Support")]
-        public static void DOTween() => AddCompileDefine("SAINTSFIELD_DOTWEEN_DISABLED");
-#endif  // SAINTSFIELD_DOTWEEN_DISABLED
-
-#else
-        [MenuItem("Window/Saints/DOTween Not Installed")]
-        public static void DOTweenNotInstalled() { }
-        [MenuItem("Window/Saints/DOTween Not Installed", true)]
-        public static bool DOTweenNotInstalledEnabled() => false;
-#endif  // DOTWEEN
+            false
+#endif
+        ;
 
         #endregion
 
         #region Addressable
-#if SAINTSFIELD_ADDRESSABLE
 
-#if !SAINTSFIELD_ADDRESSABLE_DISABLE
-        [MenuItem("Window/Saints/Disable Addressable Support")]
-        public static void Addressable() => AddCompileDefine("SAINTSFIELD_ADDRESSABLE_DISABLE");
-#endif
+        private const string DisableAddressablePath = RuntimeUtil.MenuRoot + "Disable Addressable Support";
 
+        [MenuItem(DisableAddressablePath, priority = 101)]
+        public static void DisableAddressable()
+        {
 #if SAINTSFIELD_ADDRESSABLE_DISABLE
-        [MenuItem("Window/Saints/Enable Addressable Support")]
-        public static void Addressable() => RemoveCompileDefine("SAINTSFIELD_ADDRESSABLE_DISABLE");
-#endif
-
+            RemoveCompileDefine
 #else
-        [MenuItem("Window/Saints/Addressable Not Installed")]
-        public static void AddressableNotInstalled() { }
-        [MenuItem("Window/Saints/Addressable Not Installed", true)]
-        public static bool AddressableNotInstalledEnabled() => false;
+            AddCompileDefine
 #endif
+                ("SAINTSFIELD_ADDRESSABLE_DISABLE");
+        }
+
+        [MenuItem(DisableAddressablePath, true)]
+        public static bool DisableAddressableValidate() =>
+#if SAINTSFIELD_ADDRESSABLE
+            true
+#else
+            false
+#endif
+        ;
         #endregion
 
         #region AI Navigation
-
-        // && !SAINTSFIELD_AI_NAVIGATION_DISABLED
+        private const string DisableAINavigationPath = RuntimeUtil.MenuRoot + "Disable AI Navigation Support";
+        [MenuItem(DisableAINavigationPath, priority = 102)]
+        public static void DisableDisableAINavigation()
+        {
+#if SAINTSFIELD_AI_NAVIGATION_DISABLE
+            RemoveCompileDefine
+#else
+            AddCompileDefine
+#endif
+                ("SAINTSFIELD_AI_NAVIGATION_DISABLE");
+        }
+        [MenuItem(DisableAINavigationPath, true)]
+        public static bool DisableAINavigationValidate() =>
 #if SAINTSFIELD_AI_NAVIGATION
-
-#if !SAINTSFIELD_AI_NAVIGATION_DISABLED
-        [MenuItem("Window/Saints/Disable AI Navigation Support")]
-        public static void AiNavigation() => AddCompileDefine("SAINTSFIELD_AI_NAVIGATION_DISABLED");
-#endif  // !SAINTSFIELD_AI_NAVIGATION_DISABLED
-
-#if SAINTSFIELD_AI_NAVIGATION_DISABLED
-        [MenuItem("Window/Saints/Enable AI Navigation Support")]
-        public static void AiNavigation() => RemoveCompileDefine("SAINTSFIELD_AI_NAVIGATION_DISABLED");
-#endif  // SAINTSFIELD_AI_NAVIGATION_DISABLED
-
-#else   // SAINTSFIELD_AI_NAVIGATION
-        [MenuItem("Window/Saints/AI Navigation Not Installed")]
-        public static void AiNavigationNotInstalled() { }
-        [MenuItem("Window/Saints/AI Navigation Not Installed", true)]
-        public static bool AiNavigationNotInstalledEnabled() => false;
-#endif  // SAINTSFIELD_AI_NAVIGATION
-
+            true
+#else
+            false
+#endif
+        ;
         #endregion
 
         #region I2Loc
 
+        private const string EnableI2LocalizationSupportPath = RuntimeUtil.MenuRoot + "Enable I2 Localization Support";
+        public const string EnableI2LocalizationSupportMarco = "SAINTSFIELD_I2_LOC";
+        [MenuItem(EnableI2LocalizationSupportPath, priority = 103)]
+        public static void EnableI2LocalizationSupport()
+        {
 #if SAINTSFIELD_I2_LOC
-        [MenuItem("Window/Saints/Disable I2 Localization Support")]
-        public static void I2Localization() => RemoveCompileDefine("SAINTSFIELD_I2_LOC");
+            RemoveCompileDefine(EnableI2LocalizationSupportMarco);
 #else
-        [MenuItem("Window/Saints/Enable I2 Localization Support")]
-        public static void I2Localization() => I2SetupWindow.OpenWindow();
+            I2SetupWindow.OpenWindow();
 #endif
+        }
+        #endregion
 
+        #region Wwise
+        private const string DisableWwiseSupportPath = RuntimeUtil.MenuRoot + "Disable Wwise Support";
+        [MenuItem(DisableWwiseSupportPath, priority = 104)]
+        public static void DisableWwiseSupport()
+        {
+#if SAINTSFIELD_WWISE_DISABLE
+            RemoveCompileDefine
+#else
+            AddCompileDefine
+#endif
+                ("SAINTSFIELD_WWISE_DISABLE");
+        }
+        [MenuItem(DisableWwiseSupportPath, true)]
+        public static bool DisableWwiseSupportValidate() =>
+#if WWISE_INSTALLED
+            true
+#else
+            false
+#endif
+        ;
+        #endregion
+
+        #region render-pipelines.universal
+        private const string DisableScriptableRenderPipelinePath = RuntimeUtil.MenuRoot + "Disable Scriptable Render Pipeline Support";
+        [MenuItem(DisableScriptableRenderPipelinePath, priority = 105)]
+        public static void DisableScriptableRenderPipeline()
+        {
+#if SAINTSFIELD_RENDER_PIPELINE_UNIVERSAL_DISABLE
+            RemoveCompileDefine
+#else
+            AddCompileDefine
+#endif
+                ("SAINTSFIELD_RENDER_PIPELINE_UNIVERSAL_DISABLE");
+        }
+        [MenuItem(DisableScriptableRenderPipelinePath, true)]
+        public static bool DisableScriptableRenderPipelineValidate() =>
+#if SAINTSFIELD_RENDER_PIPELINE_UNIVERSAL
+            true
+#else
+            false
+#endif
+        ;
+        #endregion
+
+        #region Netcode GameObjects
+        private const string DisableNetcodeGameObjectsPath = RuntimeUtil.MenuRoot + "Disable Netcode GameObjects Support";
+        [MenuItem(DisableNetcodeGameObjectsPath, priority = 106)]
+        public static void DisableNetcodeGameObjects()
+        {
+#if SAINTSFIELD_NETCODE_GAMEOBJECTS_DISABLED
+            RemoveCompileDefine
+#else
+            AddCompileDefine
+#endif
+                ("SAINTSFIELD_NETCODE_GAMEOBJECTS_DISABLED");
+        }
+        [MenuItem(DisableNetcodeGameObjectsPath, true)]
+        public static bool DisableNetcodeGameObjectsValidate() =>
+#if SAINTSFIELD_NETCODE_GAMEOBJECTS
+            true
+#else
+            false
+#endif
+        ;
         #endregion
 
         #region Header GUI
 
+        private const string EnableStandAloneHeaderGUISupportPath = RuntimeUtil.MenuRoot + "Enable Stand-Alone Header GUI Support";
+        [MenuItem(EnableStandAloneHeaderGUISupportPath)]
+        public static void EnableStandAloneHeaderGUISupport()
+        {
 #if SAINTSFIELD_HEADER_GUI
-        [MenuItem("Window/Saints/Disable Stand-Alone Header GUI Support")]
-        public static void HeaderGUI() => RemoveCompileDefine("SAINTSFIELD_HEADER_GUI");
+            RemoveCompileDefine
 #else
-        [MenuItem("Window/Saints/Enable Stand-Alone Header GUI Support")]
-        public static void HeaderGUI() => AddCompileDefine("SAINTSFIELD_HEADER_GUI");
+            AddCompileDefine
 #endif
-
+                ("SAINTSFIELD_HEADER_GUI");
+        }
 
         #endregion
 
         #region Color Palette
 
-#if SAINTSFIELD_DEBUG
-        [MenuItem("Saints/Color Palette...")]
-#else
-        [MenuItem("Window/Saints/Color Palette...")]
-#endif
+        [MenuItem(RuntimeUtil.MenuRoot + "Color Palette...")]
         public static void ColorPaletteMenu()
         {
             string[] guids = AssetDatabase.FindAssets("t:" + typeof(ColorPaletteArray).FullName);
@@ -304,29 +393,15 @@ namespace SaintsField.Editor.Utils
 
         #endregion
 
-        // #region Code Analysis
-        //
-        // // ReSharper disable once InconsistentNaming
-        // public const string SAINTSFIELD_CODE_ANALYSIS = "SAINTSFIELD_CODE_ANALYSIS";
-        //
-        // [MenuItem(MenuRoot + "Code Analysis...")]
-        // public static void EnableCodeAnalysis()
-        // {
-        //     SaintsFieldSetupWindow.Open();
-        // }
-        //
-        //
-        // #endregion
-
 #if SAINTSFIELD_DEBUG
-        [MenuItem(MenuRoot + "IMGUI Debugger" )]
+        [MenuItem(RuntimeUtil.MenuRoot + "IMGUI Debugger...")]
         public static void OpenIMGUIDebugger()
         {
             EditorWindow.GetWindow(Type.GetType("UnityEditor.GUIViewDebuggerWindow,UnityEditor")).Show();
         }
 #endif
 
-        [MenuItem(MenuRoot + "EColor Preview")]
+        [MenuItem(RuntimeUtil.MenuRoot + "EColor Preview...")]
         public static void OpenEColorPreview()
         {
             EColorPreviewWindow.Open();
@@ -415,6 +490,92 @@ namespace SaintsField.Editor.Utils
                     Debug.LogException(e);
                 }
             }
+        }
+
+        [InitializeOnLoadMethod]
+        private static void Checkmark()
+        {
+            Menu.SetChecked(SaintsEditorApplyPath,
+#if SAINTSFIELD_SAINTS_EDITOR_APPLY
+                true
+#else
+                false
+#endif
+            );
+
+            Menu.SetChecked(DisableIMGUIConstantRepaintPath,
+#if SAINTSFIELD_SAINTS_EDITOR_APPLY && SAINTSFIELD_SAINTS_EDITOR_IMGUI_CONSTANT_REPAINT_DISABLE
+                 true
+#else
+                false
+#endif
+            );
+
+            Menu.SetChecked(EnableDOTweenPath,
+#if DOTWEEN && SAINTSFIELD_DOTWEEN_ENABLE
+                true
+#else
+                false
+#endif
+            );
+
+            Menu.SetChecked(DisableAddressablePath,
+#if SAINTSFIELD_ADDRESSABLE && !SAINTSFIELD_ADDRESSABLE_DISABLE
+                false
+#else
+                true
+#endif
+            );
+
+            Menu.SetChecked(DisableAINavigationPath,
+#if SAINTSFIELD_AI_NAVIGATION && !SAINTSFIELD_AI_NAVIGATION_DISABLE
+                false
+#else
+                true
+#endif
+            );
+
+            Menu.SetChecked(EnableI2LocalizationSupportPath,
+#if SAINTSFIELD_I2_LOC
+                true
+#else
+                false
+#endif
+            );
+
+            Menu.SetChecked(DisableWwiseSupportPath,
+#if WWISE_INSTALLED && !SAINTSFIELD_WWISE_DISABLE
+                false
+#else
+                true
+#endif
+            );
+
+            Menu.SetChecked(DisableScriptableRenderPipelinePath,
+#if SAINTSFIELD_RENDER_PIPELINE_UNIVERSAL && SAINTSFIELD_RENDER_PIPELINE_UNIVERSAL_DISABLE
+                true
+#else
+                false
+#endif
+            );
+
+            Menu.SetChecked(DisableNetcodeGameObjectsPath,
+#if SAINTSFIELD_NETCODE_GAMEOBJECTS && SAINTSFIELD_NETCODE_GAMEOBJECTS_DISABLED
+                true
+#else
+                false
+#endif
+            );
+
+            Menu.SetChecked(EnableStandAloneHeaderGUISupportPath,
+#if SAINTSFIELD_HEADER_GUI
+                true
+#else
+                false
+#endif
+            );
+
+
         }
     }
 }

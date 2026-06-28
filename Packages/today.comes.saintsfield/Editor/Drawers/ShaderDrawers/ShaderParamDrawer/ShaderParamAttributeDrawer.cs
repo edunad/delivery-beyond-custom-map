@@ -1,4 +1,3 @@
-#if UNITY_2021_2_OR_NEWER
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,8 +49,8 @@ namespace SaintsField.Editor.Drawers.ShaderDrawers.ShaderParamDrawer
 
         private static AdvancedDropdownMetaInfo GetMetaInfo(bool foundShaderInfo, ShaderParamUtils.ShaderCustomInfo selectedShaderInfo, IEnumerable<ShaderParamUtils.ShaderCustomInfo> shaderInfos, bool isImGui)
         {
-            AdvancedDropdownList<ShaderParamUtils.ShaderCustomInfo> dropdownListValue =
-                new AdvancedDropdownList<ShaderParamUtils.ShaderCustomInfo>(isImGui? "Shader Parameters": "");
+            Dropdown<ShaderParamUtils.ShaderCustomInfo> dropdownListValue =
+                new Dropdown<ShaderParamUtils.ShaderCustomInfo>(isImGui? "Shader Parameters": "");
 
             IReadOnlyList<object> curValues = foundShaderInfo
                 ? new[] { (object)selectedShaderInfo }
@@ -59,7 +58,7 @@ namespace SaintsField.Editor.Drawers.ShaderDrawers.ShaderParamDrawer
 
             foreach (ShaderParamUtils.ShaderCustomInfo shaderInfo in shaderInfos)
             {
-                dropdownListValue.Add(shaderInfo.ToString(), shaderInfo);
+                dropdownListValue.Add(shaderInfo.GetString(true), shaderInfo, false, shaderInfo.GetIcon());
             }
 
             IReadOnlyList<AdvancedDropdownAttributeDrawer.SelectStack> curSelected;
@@ -124,4 +123,3 @@ namespace SaintsField.Editor.Drawers.ShaderDrawers.ShaderParamDrawer
         }
     }
 }
-#endif

@@ -1,9 +1,8 @@
-#if UNITY_2021_3_OR_NEWER //&& !SAINTSFIELD_UI_TOOLKIT_DISABLE
+#if UNITY_2021_3_OR_NEWER
 using System;
 using System.Reflection;
 using SaintsField.Editor.Core;
 using SaintsField.Editor.Utils;
-using UnityEditor;
 using UnityEngine.UIElements;
 
 namespace SaintsField.Editor.Playa.Renderer.PlayaInfoBoxFakeRenderer
@@ -18,6 +17,10 @@ namespace SaintsField.Editor.Playa.Renderer.PlayaInfoBoxFakeRenderer
             public InfoBoxAttribute InfoBoxAttribute;
             public SaintsFieldWithInfo FieldWithInfo;
             public RichTextDrawer RichTextDrawer;
+        }
+
+        public override void OnDestroyUIToolkit()
+        {
         }
 
         protected override (VisualElement target, bool needUpdate) CreateTargetUIToolkit(VisualElement inspectorRoot,
@@ -63,7 +66,11 @@ namespace SaintsField.Editor.Playa.Renderer.PlayaInfoBoxFakeRenderer
 
             UpdateInfoBox(helpBox, provider);
 
-            return (helpBox, !string.IsNullOrEmpty(infoBoxAttribute.ShowCallback) || infoBoxAttribute.IsCallback);
+            bool needUpdate = !string.IsNullOrEmpty(infoBoxAttribute.ShowCallback)  // need callback to control the visibility
+                              || infoBoxAttribute.IsCallback  // dynamic content
+                              || (!string.IsNullOrEmpty(infoBoxAttribute.Content) && infoBoxAttribute.Content.Contains("<field"))  // contains <field/>
+                              ;
+            return (helpBox, needUpdate);
         }
 
         private static void UpdateInfoBox(HelpBox helpBox, IRichTextTagProvider provider)
@@ -87,8 +94,13 @@ namespace SaintsField.Editor.Playa.Renderer.PlayaInfoBoxFakeRenderer
         private static (string error, bool show) UpdateInfoBoxShow(HelpBox helpBox,
             InfoBoxUserData infoBoxUserData)
         {
-            (string showError, object showResult) = Util.GetOfNoParams<object>(infoBoxUserData.FieldWithInfo.Targets[0],
-                infoBoxUserData.InfoBoxAttribute.ShowCallback, null);
+            (string showError, MemberInfo _, object showResult) = Util.GetOf<object>(
+                infoBoxUserData.InfoBoxAttribute.ShowCallback,
+                true,
+                infoBoxUserData.FieldWithInfo.SerializedProperty,
+                infoBoxUserData.FieldWithInfo.FieldInfo ?? (MemberInfo)infoBoxUserData.FieldWithInfo.PropertyInfo ?? infoBoxUserData.FieldWithInfo.MethodInfo,
+                infoBoxUserData.FieldWithInfo.Targets[0],
+                Array.Empty<object>());
             if (showError != "")
             {
                 infoBoxUserData.XmlContent = showError;
@@ -155,7 +167,7 @@ namespace SaintsField.Editor.Playa.Renderer.PlayaInfoBoxFakeRenderer
             }
 
             // Debug.Log($"{infoBoxUserData.XmlContent} == {xmlContent}: {infoBoxUserData.XmlContent == xmlContent}");
-            if (infoBoxUserData.XmlContent == xmlContent)
+            if (infoBoxUserData.XmlContent == xmlContent && !xmlContent.Contains("<field"))
             {
                 return;
             }
@@ -180,18 +192,15 @@ namespace SaintsField.Editor.Playa.Renderer.PlayaInfoBoxFakeRenderer
             label.text = "";
             label.style.flexDirection = FlexDirection.Row;
 
-            string useLabel;
-            MemberInfo member;
-            if (infoBoxUserData.FieldWithInfo.RenderType == SaintsRenderType.ClassStruct)
-            {
-                member = null;
-                useLabel = ObjectNames.NicifyVariableName(infoBoxUserData.FieldWithInfo.Targets[0].GetType().Name);
-            }
-            else
-            {
-                member = GetMemberInfo(infoBoxUserData.FieldWithInfo);
-                useLabel = ObjectNames.NicifyVariableName(member.Name);
-            }
+            // if (infoBoxUserData.FieldWithInfo.RenderType == SaintsRenderType.ClassStruct)
+            // {
+            //     ObjectNames.NicifyVariableName(infoBoxUserData.FieldWithInfo.Targets[0].GetType().Name);
+            // }
+            // else
+            // {
+            //     MemberInfo member = GetMemberInfo(infoBoxUserData.FieldWithInfo);
+            //     ObjectNames.NicifyVariableName(member.Name);
+            // }
 
             label.Clear();
             foreach (VisualElement richTextElement in infoBoxUserData.RichTextDrawer.DrawChunksUIToolKit(

@@ -3,8 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using SaintsField.Editor.Core;
 using SaintsField.Editor.Drawers.ArraySizeDrawer;
-using SaintsField.Editor.Drawers.GUIColor;
 using SaintsField.Editor.Drawers.XPathDrawers.GetByXPathDrawer;
 using SaintsField.Editor.Playa.Utils;
 using SaintsField.Editor.Utils;
@@ -16,11 +16,10 @@ using SaintsField.Wwise;
 #endif
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
 {
-    public abstract partial class AbsRenderer: ISaintsRenderer
+    public abstract partial class AbsRenderer: ISaintsRenderer, IRichTextTagProvider
     {
         public bool InAnyHorizontalLayout { get; set; }
         public bool InDirectHorizontalLayout { get; set; }
@@ -29,7 +28,7 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
         protected abstract bool AllowGuiColor { get; }
 
         // ReSharper disable InconsistentNaming
-        public readonly SaintsFieldWithInfo FieldWithInfo;
+        public SaintsFieldWithInfo FieldWithInfo { get; private set; }
         // protected readonly SerializedObject SerializedObject;
         // ReSharper enable InconsistentNaming
 
@@ -72,22 +71,7 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
             return _guiColorAttribute != null;
         }
 
-        public string ApplyGuiColor(VisualElement result)
-        {
-            if (!HasGuiColor())
-            {
-                return "";
-            }
-            (string error, Color color) = GUIColorAttributeDrawer.GetColor(_guiColorAttribute, FieldWithInfo.SerializedProperty,
-                (MemberInfo)FieldWithInfo.FieldInfo ?? (MemberInfo)FieldWithInfo.PropertyInfo ?? FieldWithInfo.MethodInfo, FieldWithInfo.Targets[0]);
 
-            if (error == "")
-            {
-                UIToolkitUtils.ApplyColor(result, color);
-            }
-
-            return error;
-        }
 
         protected static MemberInfo GetMemberInfo(SaintsFieldWithInfo info)
         {
@@ -114,8 +98,13 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
 
             List<ToggleCheckInfo> preCheckInternalInfos = new List<ToggleCheckInfo>(fieldWithInfo.PlayaAttributes.Count);
             (int, int) arraySize = (-1, -1);
+
+            object parent = fieldWithInfo.Targets[0];
+            // object parent = GetRefreshedTarget(FieldWithInfo, FieldWithInfo.Targets[0]).useTarget;
+
             foreach (IPlayaAttribute playaAttribute in fieldWithInfo.PlayaAttributes)
             {
+                // Debug.Log($"parent={parent} for {fieldWithInfo.SerializedProperty.propertyPath}({fieldWithInfo.SerializedProperty.serializedObject.targetObject})");
                 switch (playaAttribute)
                 {
                     case IVisibilityAttribute visibilityAttribute:
@@ -123,7 +112,7 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
                         (
                             visibilityAttribute.IsShow? ToggleType.Show: ToggleType.Hide,
                             visibilityAttribute.ConditionInfos,
-                            fieldWithInfo.Targets[0]
+                            parent
                         ));
                         break;
                     case EnableIfAttribute enableIfAttribute:
@@ -131,7 +120,7 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
                         (
                             ToggleType.Enable,
                             enableIfAttribute.ConditionInfos,
-                            fieldWithInfo.Targets[0]
+                            parent
                         ));
                         break;
                     case DisableIfAttribute disableIfAttribute:
@@ -139,7 +128,7 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
                         (
                             ToggleType.Disable,
                             disableIfAttribute.ConditionInfos,
-                            fieldWithInfo.Targets[0]
+                            parent
                         ));
                         break;
                     case IPlayaArraySizeAttribute arraySizeAttribute:
@@ -149,12 +138,14 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
                             arraySize = (fieldWithInfo.SerializedProperty.propertyType == SerializedPropertyType.Generic
                                          && fieldWithInfo.SerializedProperty.isArray)
                                 ? GetArraySize(arraySizeAttribute, fieldWithInfo.SerializedProperty,
-                                    fieldWithInfo.FieldInfo, fieldWithInfo.Targets[0], isImGui)
+                                    fieldWithInfo.FieldInfo, parent, isImGui)
                                 : (-1, -1);
                         }
                         break;
                 }
             }
+
+            SaintsContext.SerializedProperty = fieldWithInfo.SerializedProperty;
 
             for (int i = 0; i < preCheckInternalInfos.Count; i++)
             {
@@ -352,8 +343,11 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
                                     fieldWithInfo.TargetMemberIndex);
                             }
                         }
+#pragma warning disable CS0168 // Variable is declared but never used
                         catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
                         {
+                            // ignored
 #if SAINTSFIELD_DEBUG
                             Debug.LogException(e);
 #endif
@@ -373,8 +367,11 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
                                         fieldWithInfo.TargetMemberIndex);
                                 }
                             }
+#pragma warning disable CS0168 // Variable is declared but never used
                             catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
                             {
+                                // ignored
 #if SAINTSFIELD_DEBUG
                                 Debug.LogException(e);
 #endif
@@ -385,13 +382,20 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
                 }
             }
 
-            (string error, object result) result = Util.GetOf<object>(by, null, fieldWithInfo.SerializedProperty,
+            (string error, MemberInfo _, object result) result = Util.GetOf<object>(by, null, fieldWithInfo.SerializedProperty,
                 (MemberInfo)fieldWithInfo.FieldInfo ?? fieldWithInfo.PropertyInfo, target, null);
             // Debug.Log(r);
-            return result;
+            return (result.error, result.result);
         }
 
-        public abstract void OnDestroy();
+        public void OnDestroy()
+        {
+            OnDestroyIMGUIAbsCallback();
+            OnDestroyIMGUI();
+#if UNITY_2021_3_OR_NEWER
+
+#endif
+        }
         public abstract void OnSearchField(string searchString);
 
         protected SerializedProperty _serializedProperty;
@@ -399,6 +403,11 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
         public void SetSerializedProperty(SerializedProperty property)
         {
             _serializedProperty = property;
+        }
+
+        public void RefreshTargets(object[] targets)
+        {
+            FieldWithInfo = FieldWithInfo.RefreshTargets(targets);
         }
 
         public static string GetFriendlyName(SaintsFieldWithInfo fieldWithInfo)
@@ -424,5 +433,369 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
             return "";
         }
 
+
+        public static (object rawMemberValue, object useTarget) GetRefreshedTarget(SaintsFieldWithInfo fieldWithInfo, object eachTarget)
+        {
+            // bool isStruct = ReflectUtils.TypeIsStruct(eachTarget.GetType());
+            object useTarget = eachTarget;
+            object rawMemberValue = eachTarget;
+            if (fieldWithInfo.TargetParent != null && fieldWithInfo.TargetMemberInfo != null)
+            {
+                switch (fieldWithInfo.TargetMemberInfo)
+                {
+                    case FieldInfo fieldInfo:
+                    {
+                        try
+                        {
+                            useTarget = rawMemberValue =  fieldInfo.GetValue(fieldWithInfo.TargetParent);
+                            if (fieldWithInfo.TargetMemberIndex != -1)
+                            {
+                                useTarget = GetCollectionIndex(useTarget, fieldWithInfo.TargetMemberIndex);
+                            }
+                            // Debug.Log($"useTarget={useTarget}");
+                        }
+#pragma warning disable CS0168 // Variable is declared but never used
+                        catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
+                        {
+                            // ignored
+#if SAINTSFIELD_DEBUG
+                            Debug.LogException(e);
+#endif
+                        }
+                    }
+                        break;
+                    case PropertyInfo propertyInfo:
+                    {
+                        if (propertyInfo.CanRead)
+                        {
+                            try
+                            {
+                                useTarget = rawMemberValue = propertyInfo.GetValue(fieldWithInfo.TargetParent);
+                                if (fieldWithInfo.TargetMemberIndex != -1)
+                                {
+                                    useTarget = GetCollectionIndex(useTarget, fieldWithInfo.TargetMemberIndex);
+                                }
+                            }
+#pragma warning disable CS0168 // Variable is declared but never used
+                            catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
+                            {
+                                // ignored
+#if SAINTSFIELD_DEBUG
+                                Debug.LogException(e);
+#endif
+                            }
+                        }
+                    }
+                        break;
+                }
+            }
+
+            return (rawMemberValue, useTarget);
+        }
+
+        protected void BackWriteCallback(object rawMemberValue, object useTarget)
+        {
+            bool isStruct = ReflectUtils.TypeIsStruct(FieldWithInfo.Targets[0].GetType());
+            if (isStruct && FieldWithInfo.TargetParent != null && FieldWithInfo.TargetMemberInfo != null)
+            {
+                // Debug.Log($"write back {FieldWithInfo.TargetParent}:{FieldWithInfo.TargetMemberInfo.Name}");
+                switch (FieldWithInfo.TargetMemberInfo)
+                {
+                    case FieldInfo fieldInfo:
+                    {
+                        if (FieldWithInfo.TargetMemberIndex != -1)
+                        {
+                            if(rawMemberValue != null)
+                            {
+                                Util.SetCollectionIndex(rawMemberValue, FieldWithInfo.TargetMemberIndex, useTarget);
+                            }
+                        }
+                        else
+                        {
+                            try
+                            {
+                                fieldInfo.SetValue(FieldWithInfo.TargetParent, useTarget);
+                            }
+#pragma warning disable CS0168 // Variable is declared but never used
+                            catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
+                            {
+                                // ignored
+#if SAINTSFIELD_DEBUG
+                                Debug.LogException(e);
+#endif
+                            }
+                        }
+                    }
+                        break;
+                    case PropertyInfo propertyInfo:
+                    {
+                        if (propertyInfo.CanWrite)
+                        {
+                            if (FieldWithInfo.TargetMemberIndex != -1)
+                            {
+                                if(rawMemberValue != null)
+                                {
+                                    Util.SetCollectionIndex(rawMemberValue, FieldWithInfo.TargetMemberIndex,
+                                        useTarget);
+                                }
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    propertyInfo.SetValue(FieldWithInfo.TargetParent, useTarget);
+                                }
+#pragma warning disable CS0168 // Variable is declared but never used
+                                catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
+                                {
+                                    // ignored
+#if SAINTSFIELD_DEBUG
+                                    Debug.LogException(e);
+#endif
+                                }
+                            }
+                        }
+                    }
+                        break;
+                }
+            }
+        }
+
+        private static readonly Type[] SkipTypes = { typeof(IntPtr), typeof(UIntPtr), typeof(void) };
+
+        public static bool SkipTypeDrawing(Type checkType)
+        {
+            foreach (Type disallowType in SkipTypes)
+            {
+                if (disallowType.IsAssignableFrom(checkType))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public string GetLabel()
+        {
+            switch (FieldWithInfo.RenderType)
+            {
+                case SaintsRenderType.SerializedField:
+                case SaintsRenderType.InjectedSerializedField:
+                {
+                    // ReSharper disable once ConvertIfStatementToReturnStatement
+                    if (SerializedUtils.IsOk(FieldWithInfo.SerializedProperty))
+                    {
+                        return FieldWithInfo.SerializedProperty.displayName;
+                    }
+
+                    return "";
+                }
+                case SaintsRenderType.NonSerializedField:
+                {
+                    if (FieldWithInfo.FieldInfo != null)
+                    {
+                        return ObjectNames.NicifyVariableName(FieldWithInfo.FieldInfo.Name);
+                    }
+
+                    return "";
+                }
+                case SaintsRenderType.Method:
+                    return ObjectNames.NicifyVariableName(FieldWithInfo.MethodInfo.Name);
+                case SaintsRenderType.NativeProperty:
+                    return ObjectNames.NicifyVariableName(FieldWithInfo.PropertyInfo.Name);
+                case SaintsRenderType.ClassStruct:
+                    return ObjectNames.NicifyVariableName(FieldWithInfo.ClassStructType.Name);
+                case SaintsRenderType.Other:
+                    return "";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(FieldWithInfo.RenderType), FieldWithInfo.RenderType, null);
+            }
+        }
+
+        public string GetContainerType()
+        {
+            return GetTargetType().Name;
+        }
+
+        private Type GetTargetType()
+        {
+            return  FieldWithInfo.ClassStructType ?? FieldWithInfo.Targets[0].GetType();
+        }
+
+        public string GetContainerTypeBaseType()
+        {
+            return GetTargetType().BaseType?.Name ?? "";
+        }
+
+        public string GetIndex(string formatter)
+        {
+            switch (FieldWithInfo.RenderType)
+            {
+                case SaintsRenderType.SerializedField:
+                case SaintsRenderType.InjectedSerializedField:
+                {
+                    // ReSharper disable once ConvertIfStatementToReturnStatement
+                    if (!SerializedUtils.IsOk(FieldWithInfo.SerializedProperty))
+                    {
+                        return "";
+                    }
+
+                    int propPath = SerializedUtils.PropertyPathIndex(FieldWithInfo.SerializedProperty.propertyPath);
+                    return propPath < 0 ? "" : propPath.ToString();
+                }
+                case SaintsRenderType.NonSerializedField:
+                case SaintsRenderType.Method:
+                case SaintsRenderType.NativeProperty:
+                case SaintsRenderType.ClassStruct:
+                case SaintsRenderType.Other:
+                    return "";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(FieldWithInfo.RenderType), FieldWithInfo.RenderType, null);
+            }
+        }
+
+        public string GetField(string rawContent, string tagName, string tagValue)
+        {
+            switch (FieldWithInfo.RenderType)
+            {
+                case SaintsRenderType.SerializedField:
+                case SaintsRenderType.InjectedSerializedField:
+                {
+                    if (!SerializedUtils.IsOk(FieldWithInfo.SerializedProperty))
+                    {
+                        return "";
+                    }
+
+                    // string error = "";
+
+                    (string error, int index, object value) result = Util.GetValue(FieldWithInfo.SerializedProperty, FieldWithInfo.FieldInfo, FieldWithInfo.Targets[0]);
+                    // (string error, int index, object value) accResult = result;
+                    if (result.error != "")
+                    {
+                        // error = result.error;
+                    }
+                    else
+                    {
+                        if (tagName == "field")
+                        {
+                        }
+                        else
+                        {
+                            string revName = tagName["field.".Length..];
+
+                            (string error, MemberInfo _, object result) getOfValue = Util.GetOf<object>(revName, null,
+                                FieldWithInfo.SerializedProperty,
+                                FieldWithInfo.FieldInfo, result.value, null);
+
+                            result = (getOfValue.error, result.index, getOfValue.result);
+                        }
+                    }
+
+                    // ReSharper disable once InvertIf
+                    if (result.error != "")
+                    {
+#if SAINTSFIELD_DEBUG
+                        Debug.LogWarning(result.error);
+#endif
+                        return rawContent;
+                    }
+
+                    return RichTextDrawer.TagStringFormatter(result.value, tagValue);
+                }
+                case SaintsRenderType.NonSerializedField:
+                {
+                    FieldInfo memberInfo = FieldWithInfo.FieldInfo;
+                    object value;
+                    try
+                    {
+                        value = memberInfo.GetValue(FieldWithInfo.Targets[0]);
+                    }
+#pragma warning disable CS0168 // Variable is declared but never used
+                    catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
+                    {
+#if SAINTSFIELD_DEBUG
+                        Debug.LogWarning(e);
+#endif
+                        return "";
+                    }
+
+                    if (tagName == "field")
+                    {
+                    }
+                    else
+                    {
+                        string revName = tagName["field.".Length..];
+
+                        (string error, MemberInfo _, object result) getOfValue = Util.GetOf<object>(revName, null,
+                            null,
+                            memberInfo, value, null);
+                        if (!string.IsNullOrEmpty(getOfValue.error))
+                        {
+#if SAINTSFIELD_DEBUG
+                            Debug.LogWarning(getOfValue.error);
+#endif
+                            return "";
+                        }
+
+                        value = getOfValue.result;
+                    }
+
+                    return RichTextDrawer.TagStringFormatter(value, tagValue);
+                }
+                case SaintsRenderType.NativeProperty:
+                {
+                    PropertyInfo memberInfo = FieldWithInfo.PropertyInfo;
+                    object value;
+                    try
+                    {
+                        value = memberInfo.GetValue(FieldWithInfo.Targets[0]);
+                    }
+#pragma warning disable CS0168 // Variable is declared but never used
+                    catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
+                    {
+#if SAINTSFIELD_DEBUG
+                        Debug.LogWarning(e);
+#endif
+                        return "";
+                    }
+
+                    if (tagName == "field")
+                    {
+                    }
+                    else
+                    {
+                        string revName = tagName["field.".Length..];
+
+                        (string error, MemberInfo _, object result) getOfValue = Util.GetOf<object>(revName, null,
+                            null,
+                            memberInfo, value, null);
+                        if (!string.IsNullOrEmpty(getOfValue.error))
+                        {
+#if SAINTSFIELD_DEBUG
+                            Debug.LogWarning(getOfValue.error);
+#endif
+                            return "";
+                        }
+
+                        value = getOfValue.result;
+                    }
+
+                    return RichTextDrawer.TagStringFormatter(value, tagValue);
+                }
+                case SaintsRenderType.Method:
+                case SaintsRenderType.ClassStruct:
+                case SaintsRenderType.Other:
+                    return "";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(FieldWithInfo.RenderType), FieldWithInfo.RenderType, null);
+            }
+        }
     }
 }

@@ -140,7 +140,7 @@ namespace SaintsField.Editor.Drawers.MinMaxSliderDrawer
             }
             else
             {
-                (string getError, object getValue) =
+                (string getError, MemberInfo _, object getValue) =
                     Util.GetOf<object>(minMaxSliderAttribute.MinCallback, 0, property, info, parentTarget, null);
                 if (getError != "")
                 {
@@ -156,7 +156,7 @@ namespace SaintsField.Editor.Drawers.MinMaxSliderDrawer
             }
             else
             {
-                (string getError, object getValue) =
+                (string getError, MemberInfo _, object getValue) =
                     Util.GetOf<object>(minMaxSliderAttribute.MaxCallback, 0f, property, info, parentTarget, null);
                 if (getError != "")
                 {
@@ -416,7 +416,7 @@ namespace SaintsField.Editor.Drawers.MinMaxSliderDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -456,7 +456,7 @@ namespace SaintsField.Editor.Drawers.MinMaxSliderDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)

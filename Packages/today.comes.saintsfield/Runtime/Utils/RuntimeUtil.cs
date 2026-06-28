@@ -13,6 +13,15 @@ namespace SaintsField.Utils
 {
     public static class RuntimeUtil
     {
+        public const string MenuRoot =
+#if SAINTSFIELD_DEBUG
+                "Saints Field/"
+#else
+                "Tools/Saints Field/"
+#endif
+            ;
+
+
         public static (string content, bool isCallback) ParseCallback(string content, bool isCallback=false)
         {
             if (isCallback || content is null)
@@ -67,9 +76,6 @@ namespace SaintsField.Utils
             List<RichTextParsedChunk> acc = new List<RichTextParsedChunk>();
             foreach (RichTextParsedChunk richTextParsedChunk in ParseRichXml(path))
             {
-
-                // Debug.Log($"richTextParsedChunk={richTextParsedChunk}");
-
                 if (richTextParsedChunk.ChunkType == ChunkType.NormalTag)
                 {
                     if (richTextParsedChunk.TagType == TagType.StartTag)
@@ -233,7 +239,13 @@ namespace SaintsField.Utils
 
         public static IEnumerable<RichTextParsedChunk> ParseRichXml(string richXml)
         {
-            // Debug.Log($"get rich xml: {richXml}");
+            if (!richXml.Contains("<") || !richXml.Contains(">"))
+            {
+                yield return new RichTextParsedChunk(richXml, ChunkType.Text);
+                yield break;
+            }
+
+            // Debug.Log($"get rich xml: `{richXml}`");
             List<string> colors = new List<string>();
 
             // Define a regular expression pattern to match the tags
@@ -245,18 +257,35 @@ namespace SaintsField.Utils
 
             // List<string> colorPresent = new List<string>();
             // List<string> stringPresent = new List<string>();
-            List<(string tagName, string tagValueOrNull, string rawContent)> openTags = new List<(string tagName, string tagValueOrNull, string rawContent)>();
+            List<(string tagName, string tagValueOrNull, string rawContent)> openTags =
+                new List<(string tagName, string tagValueOrNull, string rawContent)>();
+            List<(string tagName, string tagValueOrNull, string rawContent)> needReopenTags =
+                new List<(string tagName, string tagValueOrNull, string rawContent)>();
             StringBuilder richText = new StringBuilder();
             // List<RichTextChunk> richTextChunks = new List<RichTextChunk>();
             foreach (string part in splitByTags.Where(each => each != ""))
             {
-                (RichPartType partType, string content, string value, bool isSelfClose) parsedResult = ParsePart(part);
+                foreach ((string tagName, string tagValueOrNull, string rawContent) reOpenTag in needReopenTags)
+                {
+                    yield return new RichTextParsedChunk(
+                        reOpenTag.rawContent,
+                        ChunkType.NormalTag,
+                        tagType: TagType.StartTag,
+                        tagName: reOpenTag.tagName,
+                        tagValue: reOpenTag.tagValueOrNull);
+                }
 
-                // Debug.Log($"parse: {part}({part == ""}) -> partType={parsedResult.partType}, content={parsedResult.content}, value={parsedResult.value}, isSelfClose={parsedResult.isSelfClose}");
+                needReopenTags.Clear();
+
+                (RichPartType partType, string content, string value, bool isSelfClose) parsedResult =
+                    ParsePart(part);
+
+                // Debug.Log($"{parsedResult.partType}: {parsedResult.content}/{parsedResult.value}/{parsedResult.isSelfClose}");
 
                 // ReSharper disable once MergeIntoPattern
                 // ReSharper disable once ConvertIfStatementToSwitchStatement
-                if (parsedResult.partType == RichPartType.Content && parsedResult.value == null && !parsedResult.isSelfClose)
+                if (parsedResult.partType == RichPartType.Content && parsedResult.value == null &&
+                    !parsedResult.isSelfClose)
                 {
                     richText.Append(parsedResult.content);
                 }
@@ -268,6 +297,7 @@ namespace SaintsField.Utils
                     {
                         yield return new RichTextParsedChunk(curContent, ChunkType.Text);
                     }
+
                     richText = new StringBuilder();
 
                     // Debug.Log($"parse={parsedResult.content}, {parsedResult.value}");
@@ -276,6 +306,7 @@ namespace SaintsField.Utils
                     // ReSharper disable once MergeIntoPattern
                     if (parsedResult.content == "color" && parsedResult.value != null)
                     {
+                        // Debug.Log($"add color {parsedResult.value}");
                         colors.Add(parsedResult.value);
                     }
 
@@ -311,34 +342,29 @@ namespace SaintsField.Utils
 
                         // Debug.Log("processing richText");
                         richText = new StringBuilder();
-                        (string tagName, string tagValueOrNull, string rawContent)[] openTagsCopy = openTags.ToArray();
+                        List<(string tagName, string tagValueOrNull, string rawContent)> openTagsCopy =
+                            openTags.ToList();
 
-                        for (int index = 0; index < openTagsCopy.Length; index++)
+                        for (int index = 0; index < openTagsCopy.Count; index++)
                         {
-                            (string tagName, string tagValueOrNull, string rawContent) closeTag = openTagsCopy[openTagsCopy.Length - index - 1];
+                            (string tagName, string tagValueOrNull, string rawContent) closeTag =
+                                openTagsCopy[openTagsCopy.Count - index - 1];
                             yield return new RichTextParsedChunk($"</{closeTag.tagName}>", ChunkType.NormalTag,
-                                tagType: TagType.EndTag, tagName: closeTag.tagName, tagValue: closeTag.tagValueOrNull);
+                                tagType: TagType.EndTag, tagName: closeTag.tagName,
+                                tagValue: closeTag.tagValueOrNull);
                         }
 
+                        var color = colors.Count > 0 ? colors[colors.Count - 1] : null;
                         RichTextParsedChunk iconTag = new RichTextParsedChunk(part,
                             ChunkType.IconTag,
                             tagValue: parsedResult.value,
                             // ReSharper disable once UseIndexFromEndExpression
-                            iconColor: colors.Count > 0 ? colors[colors.Count - 1] : null);
+                            iconColor: color);
                         // Debug.Log($"yield raw iconTag {iconTag}");
-                        // Debug.Log($"yield iconTag={iconTag}");
+                        // Debug.Log($"yield iconTag={iconTag}(color={color})");
 
                         yield return iconTag;
-
-                        foreach ((string tagName, string tagValueOrNull, string rawContent) reOpenTag in openTagsCopy)
-                        {
-                            yield return new RichTextParsedChunk(
-                                reOpenTag.rawContent,
-                                ChunkType.NormalTag,
-                                tagType: TagType.StartTag,
-                                tagName: reOpenTag.tagName,
-                                tagValue: reOpenTag.tagValueOrNull);
-                        }
+                        needReopenTags.AddRange(openTagsCopy);
                     }
                     else
                     {
@@ -365,7 +391,7 @@ namespace SaintsField.Utils
                         richText = new StringBuilder();
 
                         yield return new RichTextParsedChunk(part, ChunkType.NormalTag,
-                            tagType: TagType.EndTag, tagName: parsedResult.content);
+                            tagType: TagType.EndTag, tagName: parsedResult.content, tagValue: parsedResult.value);
                     }
                 }
                 else
@@ -599,7 +625,7 @@ namespace SaintsField.Utils
         {
             return $"<{propName}>k__BackingField";
         }
-        
+
         /// <summary>
         /// Checks if the <paramref name="memberName"/> value is equal to the automatically generated C# backing field name for the given <paramref name="basePropName"/> without gc allocation.
         /// </summary>
@@ -608,15 +634,15 @@ namespace SaintsField.Utils
         /// <returns> True if <paramref name="memberName"/> is equal to the auto generated backing field name for <paramref name="basePropName"/> </returns>
         public static bool IsAutoPropertyNoAlloc(string basePropName, string memberName)
         {
-            const string INITIAL_PART    = "<";                // Length: 1
-            const string FINAL_PART_PART = ">k__BackingField"; // Lenght: 16
+            const string initialPart    = "<";                // Length: 1
+            const string finalPart = ">k__BackingField"; // Lenght: 16
             if (1 + 16 + basePropName.Length != memberName.Length)
             {
                 return false;
             }
 
-            return string.Compare(memberName,   0,                      INITIAL_PART,    0, 1) == 0
-                && string.Compare(memberName,   memberName.Length - 16, FINAL_PART_PART, 0, 16) == 0
+            return string.Compare(memberName,   0,                      initialPart,    0, 1) == 0
+                && string.Compare(memberName,   memberName.Length - 16, finalPart, 0, 16) == 0
                 && string.Compare(basePropName, 0,                      memberName,      1, basePropName.Length) == 0;
         }
 

@@ -1,3 +1,4 @@
+#if UNITY_2021_3_OR_NEWER && !SAINTSFIELD_UI_TOOLKIT_DISABLE
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -582,7 +583,17 @@ namespace SaintsField.Editor.Playa.ScriptableRenderer
 
                     try
                     {
+                        using EditorGUI.ChangeCheckScope changed = new EditorGUI.ChangeCheckScope();
                         rendererFeatureEditor.OnInspectorGUI();
+                        // ReSharper disable once InvertIf
+                        if (changed.changed)
+                        {
+                            // WTF Unity
+                            using (new DisableUnityLogScoop())
+                            {
+                                rendererFeatureEditor.serializedObject.ApplyModifiedProperties();
+                            }
+                        }
                     }
                     catch (NullReferenceException e)
                     {
@@ -594,12 +605,6 @@ namespace SaintsField.Editor.Playa.ScriptableRenderer
 
                         throw;
                     }
-
-                    // WTF Unity
-                    using (new DisableUnityLogScoop())
-                    {
-                        rendererFeatureEditor.serializedObject.ApplyModifiedProperties();
-                    }
                 }));
             }
 
@@ -610,9 +615,9 @@ namespace SaintsField.Editor.Playa.ScriptableRenderer
 
         private bool IsUIToolkit(UnityEditor.Editor rendererFeatureEditor)
         {
-            var type = rendererFeatureEditor.GetType();
+            Type type = rendererFeatureEditor.GetType();
 
-            var method = type.GetMethod(
+            MethodInfo method = type.GetMethod(
                 "CreateInspectorGUI",
                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
             );
@@ -653,3 +658,4 @@ namespace SaintsField.Editor.Playa.ScriptableRenderer
 
     }
 }
+#endif

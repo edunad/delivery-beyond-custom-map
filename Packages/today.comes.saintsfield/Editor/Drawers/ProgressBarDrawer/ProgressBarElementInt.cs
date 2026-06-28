@@ -1,3 +1,4 @@
+#if UNITY_2021_3_OR_NEWER
 using System;
 using System.Reflection;
 using SaintsField.Editor.Utils;
@@ -340,3 +341,4 @@ namespace SaintsField.Editor.Drawers.ProgressBarDrawer
         }
     }
 }
+#endif

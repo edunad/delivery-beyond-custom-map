@@ -1,10 +1,11 @@
-#if (WWISE_2024_OR_LATER || WWISE_2023_OR_LATER || WWISE_2022_OR_LATER || WWISE_2021_OR_LATER || WWISE_2020_OR_LATER || WWISE_2019_OR_LATER || WWISE_2018_OR_LATER || WWISE_2017_OR_LATER || WWISE_2016_OR_LATER || SAINTSFIELD_WWISE) && !SAINTSFIELD_WWISE_DISABLE
+#if (WWISE_2030_OR_LATER || WWISE_2029_OR_LATER || WWISE_2028_OR_LATER || WWISE_2027_OR_LATER || WWISE_2026_OR_LATER || WWISE_2025_OR_LATER || WWISE_2024_OR_LATER || WWISE_2023_OR_LATER || WWISE_2022_OR_LATER || WWISE_2021_OR_LATER || WWISE_2020_OR_LATER || WWISE_2019_OR_LATER || WWISE_2018_OR_LATER || WWISE_2017_OR_LATER || WWISE_2016_OR_LATER || SAINTSFIELD_WWISE) && !SAINTSFIELD_WWISE_DISABLE
 
 #if UNITY_2021_3_OR_NEWER
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using SaintsField.Editor.Utils;
+using SaintsField.Editor.Utils.SaintsObjectPickerWindow;
 using SaintsField.Interfaces;
 using UnityEditor;
 using UnityEngine;
@@ -100,6 +101,35 @@ namespace SaintsField.Editor.Drawers.Wwise.GetWwiseDrawer
             }
 
             base.OnAwakeUIToolkit(property, saintsAttribute, index, allAttributes, container, onValueChangedCallback, info, parent);
+        }
+
+        protected override SaintsObjectPickerWindowUIToolkit.ObjectBaseInfo MakeObjectBaseInfo(UnityEngine.Object objResult,
+            string assetPath)
+        {
+            if (objResult is WwiseObjectReference wwiseObjectReference)
+            {
+                string path = "";
+                string type = "";
+                // ReSharper disable once InvertIf
+                if (GuidToPath.TryGetValue(wwiseObjectReference.Guid, out WwiseBasicInfo value))
+                {
+                    path = string.Join("/", value.BasicPathSegments);
+                    type = value.WwiseObjectType.ToString();
+                }
+                return new SaintsObjectPickerWindowUIToolkit.ObjectBaseInfo(
+                    wwiseObjectReference,
+                    wwiseObjectReference.ObjectName,
+                    type,
+                    path
+                );
+            }
+
+            if (!objResult)
+            {
+                return SaintsObjectPickerWindowUIToolkit.NoneObjectInfo;
+            }
+
+            throw new ArgumentException($"Unsupported args {objResult}", nameof(objResult));
         }
     }
 }

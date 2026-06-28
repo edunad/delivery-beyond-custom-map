@@ -1,4 +1,4 @@
-#if UNITY_2021_3_OR_NEWER //&& !SAINTSFIELD_UI_TOOLKIT_DISABLE
+#if UNITY_2021_3_OR_NEWER
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -32,10 +32,8 @@ namespace SaintsField.Editor.Playa.Renderer.ShowInInspectorFieldFakeRenderer
 
             public void SetErrorMessage(string error)
             {
-                if (_helpBox.text != error)
-                {
-                    _helpBox.text = error;
-                }
+                UIToolkitUtils.SetHelpBox(_helpBox, error);
+                UIToolkitUtils.SetDisplayStyle(this, string.IsNullOrEmpty(error)? DisplayStyle.None: DisplayStyle.Flex);
             }
         }
 
@@ -76,8 +74,13 @@ namespace SaintsField.Editor.Playa.Renderer.ShowInInspectorFieldFakeRenderer
             }
 
             result.labelElement.style.color = EColor.EditorSeparator.GetColor();
+            result.SetErrorMessage(error);
 
             return result;
+        }
+
+        public override void OnDestroyUIToolkit()
+        {
         }
 
         protected override (VisualElement target, bool needUpdate) CreateTargetUIToolkit(VisualElement inspectorRoot,
@@ -109,6 +112,15 @@ namespace SaintsField.Editor.Playa.Renderer.ShowInInspectorFieldFakeRenderer
                 },
                 name = NameContainer(),
             };
+
+            VisualElement resultElement = new VisualElement
+            {
+                name = NameResult(),
+            };
+            container.Add(resultElement);
+            NativeFieldPropertyRendererErrorField errorElement = MakeNativeFieldPropertyRendererErrorField("");
+            container.Add(errorElement);
+
             // Debug.Log(NameContainer());
             Action<object> setter = GetSetterOrNull(FieldWithInfo);
 
@@ -117,7 +129,8 @@ namespace SaintsField.Editor.Playa.Renderer.ShowInInspectorFieldFakeRenderer
 #if SAINTSFIELD_DEBUG
                 Debug.LogWarning(error);
 #endif
-                container.Add(MakeNativeFieldPropertyRendererErrorField(error));
+                // container.Add(MakeNativeFieldPropertyRendererErrorField(error));
+                errorElement.SetErrorMessage(error);
                 container.userData = new DataPayload
                 {
                     HasDrawer = false,
@@ -134,8 +147,22 @@ namespace SaintsField.Editor.Playa.Renderer.ShowInInspectorFieldFakeRenderer
 
             Type fieldType = GetFieldType(FieldWithInfo);
             string labelName = NoLabel ? null : GetNiceName(FieldWithInfo);
+            MemberInfo memberInfo = (MemberInfo)FieldWithInfo.PropertyInfo ?? FieldWithInfo.FieldInfo;
             // FieldWithInfo.Targets;
-            (VisualElement result, bool isNestedField) = UIToolkitEdit.UIToolkitValueEdit(null, labelName, fieldType, value, null, setter, !isSaintsSerialized, InAnyHorizontalLayout, ReflectCache.GetCustomAttributes((MemberInfo)FieldWithInfo.PropertyInfo ?? FieldWithInfo.FieldInfo), FieldWithInfo.Targets, this);
+            (VisualElement result, bool isNestedField) = UIToolkitEdit.UIToolkitValueEdit(
+                null,
+                labelName,
+                fieldType,
+                value,
+                null,
+                setter,
+                !isSaintsSerialized,
+                InAnyHorizontalLayout,
+                ReflectCache.GetCustomAttributes(memberInfo),
+                FieldWithInfo.Targets,
+                this,
+                $"{FieldWithInfo.Targets[0].GetHashCode()}.{memberInfo.Name}"
+            );
 
             _onSearchFieldUIToolkit.AddListener(Search);
             container.RegisterCallback<DetachFromPanelEvent>(_ => _onSearchFieldUIToolkit.RemoveListener(Search));
@@ -158,8 +185,9 @@ namespace SaintsField.Editor.Playa.Renderer.ShowInInspectorFieldFakeRenderer
                     oldCollection = Array.Empty<object>();
                 }
 
-                result.name = NameResult();
-                container.Add(result);
+                // result.name = NameResult();
+                // container.Add(result);
+                resultElement.Add(result);
                 container.userData = new DataPayload
                 {
                     HasDrawer = true,
@@ -336,24 +364,12 @@ namespace SaintsField.Editor.Playa.Renderer.ShowInInspectorFieldFakeRenderer
             (string error, object value) = GetValue(FieldWithInfo);
             // Debug.Log($"error={error}, value={value}");
 
-            string nameErrorBox = NameErrorBox();
-            // Debug.Log(container);
-            NativeFieldPropertyRendererErrorField errorHelpBox = container.Q<NativeFieldPropertyRendererErrorField>(nameErrorBox);
-            if (error == "")
-            {
-                errorHelpBox?.RemoveFromHierarchy();
-            }
-            else
-            {
-                if (errorHelpBox == null)
-                {
-                    container.Add(MakeNativeFieldPropertyRendererErrorField(error));
-                }
-                else
-                {
-                    errorHelpBox.SetErrorMessage(error);
-                }
+            NativeFieldPropertyRendererErrorField errorContainer = container.Q<NativeFieldPropertyRendererErrorField>(NameErrorBox());
 
+            errorContainer.SetErrorMessage(error);
+
+            if (error != "")
+            {
                 return preCheckResult;
             }
 
@@ -391,7 +407,9 @@ namespace SaintsField.Editor.Playa.Renderer.ShowInInspectorFieldFakeRenderer
                 }
             }
             // bool isEqual = userData.HasDrawer && (userData.Value == value || ReferenceEquals(userData.Value, value));
-            VisualElement fieldElementOrNull = container.Q<VisualElement>(NameResult());
+            VisualElement resultContainer = container.Q<VisualElement>(NameResult());
+
+            VisualElement fieldElementOrNull = resultContainer.Children().FirstOrDefault();
 
             // Debug.Log($"isEqual={isEqual}");
 
@@ -417,14 +435,28 @@ namespace SaintsField.Editor.Playa.Renderer.ShowInInspectorFieldFakeRenderer
 
                 bool isSaintsSerialized = FieldWithInfo.PlayaAttributes.Any(each => each is SaintsSerializedAttribute);
 
-                (VisualElement result, bool _) = UIToolkitEdit.UIToolkitValueEdit(fieldElementOrNull, NoLabel? null: GetNiceName(FieldWithInfo), GetFieldType(FieldWithInfo), value, null, userData.Setter, !isSaintsSerialized, InAnyHorizontalLayout, ReflectCache.GetCustomAttributes((MemberInfo)FieldWithInfo.PropertyInfo ?? FieldWithInfo.FieldInfo), FieldWithInfo.Targets, this);
+                MemberInfo memberInfo = (MemberInfo)FieldWithInfo.PropertyInfo ?? FieldWithInfo.FieldInfo;
+
+                (VisualElement result, bool _) = UIToolkitEdit.UIToolkitValueEdit(
+                    fieldElementOrNull,
+                    NoLabel? null: GetNiceName(FieldWithInfo),
+                    GetFieldType(FieldWithInfo),
+                    value,
+                    null,
+                    userData.Setter,
+                    !isSaintsSerialized,
+                    InAnyHorizontalLayout,
+                    ReflectCache.GetCustomAttributes(memberInfo),
+                    FieldWithInfo.Targets,
+                    this,
+                    $"{FieldWithInfo.Targets[0].GetHashCode()}.{memberInfo.Name}");
                 // Debug.Log($"Not equal create for value={value}: {result}/{result==null}");
                 if(result != null)
                 {
-                    result.name = NameResult();
-                    container.Clear();
-                    container.Add(result);
+                    resultContainer.Clear();
+                    resultContainer.Add(result);
                     userData.HasDrawer = true;
+                    errorContainer.SetErrorMessage("");
                 }
                 else if(fieldElementOrNull == null)
                 {

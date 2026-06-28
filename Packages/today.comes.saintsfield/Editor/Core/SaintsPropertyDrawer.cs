@@ -727,6 +727,7 @@ namespace SaintsField.Editor.Core
             SaintsPropertyDrawer saintsPropertyDrawer = (SaintsPropertyDrawer)MakePropertyDrawer(drawerType, fieldInfo, (Attribute)saintsAttribute, preferredLabel);
             saintsPropertyDrawer._thisProperty = property;
             saintsPropertyDrawer.InHorizontalLayout = InHorizontalLayout;
+            saintsPropertyDrawer.overrideRichTextChunks = overrideRichTextChunks;
 
 #if UNITY_2022_2_OR_NEWER  // don't bother with too old Unity
             FieldInfo preferredLabelField = typeof(PropertyDrawer).GetField("m_PreferredLabel", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -766,7 +767,7 @@ namespace SaintsField.Editor.Core
         public void Dispose()
         {
             OnDisposeIMGUI();
-#if UNITY_2021_3_OR_NEWER
+#if UNITY_2021_3_OR_NEWER && !SAINTSFIELD_UI_TOOLKIT_DISABLE
             OnDisposeUIToolkit();
 #endif
         }

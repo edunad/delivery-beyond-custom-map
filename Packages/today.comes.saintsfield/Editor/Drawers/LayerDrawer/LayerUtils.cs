@@ -58,6 +58,7 @@ namespace SaintsField.Editor.Drawers.LayerDrawer
         }
 
         public static string LayerInfoLabelUIToolkit(LayerInfo layerInfo) => $"{layerInfo.Name} <color=#808080>({layerInfo.Value})</color>";
+#if UNITY_2021_3_OR_NEWER
 
         public static void MakeDropdown(bool allowEmpty, int curMask, VisualElement root, Action<LayerInfo> onValueChangedCallback)
         {
@@ -121,5 +122,6 @@ namespace SaintsField.Editor.Drawers.LayerDrawer
 
             UnityEditor.PopupWindow.Show(worldBound, sa);
         }
+#endif
     }
 }

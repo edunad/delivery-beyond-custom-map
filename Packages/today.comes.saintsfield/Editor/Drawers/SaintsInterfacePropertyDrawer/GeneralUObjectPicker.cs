@@ -1,3 +1,4 @@
+#if UNITY_2021_3_OR_NEWER
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -90,29 +91,15 @@ namespace SaintsField.Editor.Drawers.SaintsInterfacePropertyDrawer
                     return;
                 }
 
-                bool match = serializableType.IsInstanceOfType(v.newValue);
-
-                // (bool match, Object result) =
-                //     GetSerializedObject(v.changedProperty.objectReferenceValue, valueType, interfaceType);
-                // ReSharper disable once InvertIf
-                if (!match)
+                if (!SaintsInterfaceDrawer.TryGetMatchedInterfaceValue(v.newValue, uObjectType, serializableType,
+                        out Object matchedValue))
                 {
-                    (bool findMatch, Object findResult) = SaintsInterfaceDrawer.GetSerializedObject(v.newValue,
-                        uObjectType, serializableType);
-                    if (findMatch)
-                    {
-                        // Debug.Log($"_objectField={findResult}");
-                        value = findResult;
-                    }
-                    else
-                    {
-                        // Debug.Log($"_objectField reset={value}");
-                        _objectField.SetValueWithoutNotify(value);
-                    }
+                    // Debug.Log($"_objectField reset={value}");
+                    _objectField.SetValueWithoutNotify(value);
                 }
                 else
                 {
-                    value = v.newValue;
+                    value = matchedValue;
                 }
             });
 
@@ -482,3 +469,4 @@ namespace SaintsField.Editor.Drawers.SaintsInterfacePropertyDrawer
         }
     }
 }
+#endif

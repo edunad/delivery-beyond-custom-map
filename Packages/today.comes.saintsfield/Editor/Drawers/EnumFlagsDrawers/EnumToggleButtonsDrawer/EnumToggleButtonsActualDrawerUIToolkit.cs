@@ -63,6 +63,7 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
                         LeftExpandButton leftExpandButton = container.Q<LeftExpandButton>(name: ValueButtonsAttributeDrawer.NameExpand(property));
 
                         valueButtonsArrangeElement.BindSubContainer(subPanel);
+                        valueButtonsArrangeElement.SetGreedy(!leftExpandButton.value);
 
                         PathedDropdownAttribute valueButtonsAttribute = (PathedDropdownAttribute)enumToggle;
 
@@ -79,7 +80,10 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
                         {
                             subPanel.style.display = leftExpandButton.value ? DisplayStyle.Flex : DisplayStyle.None;
                             leftExpandButton.RegisterValueChangedCallback(evt =>
-                                subPanel.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None);
+                            {
+                                valueButtonsArrangeElement.SetGreedy(!evt.newValue);
+                                subPanel.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None;
+                            });
                             valueButtonsArrangeElement.OnCalcArrangeDoneAddListener(hasSubRow =>
                             {
                                 DisplayStyle display = hasSubRow ? DisplayStyle.Flex : DisplayStyle.None;
@@ -129,7 +133,7 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
                                 .longValue;
                             object curValue = Enum.ToObject(metaInfo.EnumType, longValue);
 
-                            AdvancedDropdownList<object> enumDropdown = new AdvancedDropdownList<object>("");
+                            Dropdown<object> enumDropdown = new Dropdown<object>("");
                             foreach ((object enumValue, string enumLabel, string enumRichLabel)  in Util.GetEnumValues(targetType))
                             {
                                 // Debug.Log($"enum={enumLabel}, rich={enumRichLabel}");
@@ -139,7 +143,7 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
                                         enumValue.ToString(),
                                     }
                                     : new HashSet<string>();
-                                enumDropdown.Add(new AdvancedDropdownList<object>(enumRichLabel ?? enumLabel, enumValue)
+                                enumDropdown.Add(new Dropdown<object>(enumRichLabel ?? enumLabel, enumValue)
                                 {
                                     ExtraSearches = extraSearches,
                                 });
@@ -287,10 +291,14 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
                         VisualElement subPanel = container.Q<VisualElement>(name: ValueButtonsAttributeDrawer.NameSubPanel(property));
                         // LeftExpandButton leftExpandButton = container.Q<LeftExpandButton>(name: NameExpand(property));
                         leftExpandButton.RegisterValueChangedCallback(evt =>
-                            flagButtonFullToggleGroupElement.ToFullToggles(evt.newValue));
+                        {
+                            flagButtonsArrangeElement.SetGreedy(!evt.newValue);
+                            flagButtonFullToggleGroupElement.ToFullToggles(evt.newValue);
+                        });
                         flagButtonFullToggleGroupElement.ToFullToggles(leftExpandButton.value);
 
                         flagButtonsArrangeElement.BindSubContainer(subPanel);
+                        flagButtonsArrangeElement.SetGreedy(!leftExpandButton.value);
 
                         flagButtonsArrangeElement.UpdateButtons(
                             rawInfos
@@ -301,7 +309,10 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
                         {
                             subPanel.style.display = leftExpandButton.value ? DisplayStyle.Flex : DisplayStyle.None;
                             leftExpandButton.RegisterValueChangedCallback(evt =>
-                                subPanel.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None);
+                            {
+                                flagButtonsArrangeElement.SetGreedy(!evt.newValue);
+                                subPanel.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None;
+                            });
                             flagButtonsArrangeElement.OnCalcArrangeDoneAddListener(hasSubRow =>
                             {
                                 // leftExpandButton.SetEnabled(hasSubRow);
@@ -377,6 +388,7 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
                         LeftExpandButton leftExpandButton = container.Q<LeftExpandButton>(name: ValueButtonsAttributeDrawer.NameExpand(property));
 
                         valueButtonsArrangeElement.BindSubContainer(subPanel);
+                        valueButtonsArrangeElement.SetGreedy(!leftExpandButton.value);
 
                         PathedDropdownAttribute valueButtonsAttribute = (PathedDropdownAttribute)enumToggle;
 
@@ -393,7 +405,10 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
                         {
                             subPanel.style.display = leftExpandButton.value ? DisplayStyle.Flex : DisplayStyle.None;
                             leftExpandButton.RegisterValueChangedCallback(evt =>
-                                subPanel.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None);
+                            {
+                                valueButtonsArrangeElement.SetGreedy(!evt.newValue);
+                                subPanel.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None;
+                            });
                             valueButtonsArrangeElement.OnCalcArrangeDoneAddListener(hasSubRow =>
                             {
                                 DisplayStyle display = hasSubRow ? DisplayStyle.Flex : DisplayStyle.None;
@@ -443,7 +458,7 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
                                 .ulongValue;
                             object curValue = Enum.ToObject(metaInfo.EnumType, longValue);
 
-                            AdvancedDropdownList<object> enumDropdown = new AdvancedDropdownList<object>("");
+                            Dropdown<object> enumDropdown = new Dropdown<object>("");
                             foreach ((object enumValue, string enumLabel, string enumRichLabel)  in Util.GetEnumValues(targetType))
                             {
                                 // Debug.Log($"enum={enumLabel}, rich={enumRichLabel}");
@@ -453,7 +468,7 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
                                         enumValue.ToString(),
                                     }
                                     : new HashSet<string>();
-                                enumDropdown.Add(new AdvancedDropdownList<object>(enumRichLabel ?? enumLabel, enumValue)
+                                enumDropdown.Add(new Dropdown<object>(enumRichLabel ?? enumLabel, enumValue)
                                 {
                                     ExtraSearches = extraSearches,
                                 });
@@ -601,10 +616,14 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
                         VisualElement subPanel = container.Q<VisualElement>(name: ValueButtonsAttributeDrawer.NameSubPanel(property));
                         // LeftExpandButton leftExpandButton = container.Q<LeftExpandButton>(name: NameExpand(property));
                         leftExpandButton.RegisterValueChangedCallback(evt =>
-                            flagButtonFullToggleGroupElement.ToFullToggles(evt.newValue));
+                        {
+                            flagButtonsArrangeElement.SetGreedy(!evt.newValue);
+                            flagButtonFullToggleGroupElement.ToFullToggles(evt.newValue);
+                        });
                         flagButtonFullToggleGroupElement.ToFullToggles(leftExpandButton.value);
 
                         flagButtonsArrangeElement.BindSubContainer(subPanel);
+                        flagButtonsArrangeElement.SetGreedy(!leftExpandButton.value);
 
                         flagButtonsArrangeElement.UpdateButtons(
                             rawInfos
@@ -615,7 +634,10 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
                         {
                             subPanel.style.display = leftExpandButton.value ? DisplayStyle.Flex : DisplayStyle.None;
                             leftExpandButton.RegisterValueChangedCallback(evt =>
-                                subPanel.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None);
+                            {
+                                flagButtonsArrangeElement.SetGreedy(!evt.newValue);
+                                subPanel.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None;
+                            });
                             flagButtonsArrangeElement.OnCalcArrangeDoneAddListener(hasSubRow =>
                             {
                                 // leftExpandButton.SetEnabled(hasSubRow);

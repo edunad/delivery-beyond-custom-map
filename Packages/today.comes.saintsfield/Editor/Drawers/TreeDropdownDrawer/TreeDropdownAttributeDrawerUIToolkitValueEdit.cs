@@ -1,3 +1,4 @@
+#if UNITY_2021_3_OR_NEWER
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,7 +31,7 @@ namespace SaintsField.Editor.Drawers.TreeDropdownDrawer
                 UIToolkitUtils.DropdownButtonField dropdownButtonField = UIToolkitUtils.MakeDropdownButtonUIToolkit(label);
                 Add(dropdownButtonField);
                 _buttonField = dropdownButtonField;
-                UIToolkitUtils.UIToolkitValueEditAfterProcess(dropdownButtonField, setterOrNull,
+                UIToolkitUtils.UIToolkitValueEditAfterProcess(dropdownButtonField, setterOrNull != null,
                     labelGrayColor, inHorizontalLayout);
 
                 HelpBox helpBox = new HelpBox("", HelpBoxMessageType.Error)
@@ -107,3 +108,4 @@ namespace SaintsField.Editor.Drawers.TreeDropdownDrawer
         }
     }
 }
+#endif

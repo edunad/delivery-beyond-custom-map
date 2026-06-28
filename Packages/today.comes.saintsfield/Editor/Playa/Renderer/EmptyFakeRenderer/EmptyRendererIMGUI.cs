@@ -5,7 +5,7 @@ namespace SaintsField.Editor.Playa.Renderer.EmptyFakeRenderer
 {
     public partial class EmptyRenderer
     {
-        protected override void RenderTargetIMGUI(float width, AbsRenderer.PreCheckResult preCheckResult)
+        public override void OnDestroyIMGUI()
         {
         }
 

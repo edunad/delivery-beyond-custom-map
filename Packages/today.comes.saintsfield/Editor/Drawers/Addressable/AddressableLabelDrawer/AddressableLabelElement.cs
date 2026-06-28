@@ -13,14 +13,7 @@ namespace SaintsField.Editor.Drawers.Addressable.AddressableLabelDrawer
 
             List<string> labels = AddressableAssetSettingsDefaultObject.Settings?.GetLabels() ?? new List<string>();
 
-            if (labels.Contains(CachedValue))
-            {
-                Label.text = CachedValue;
-            }
-            else
-            {
-                Label.text = string.IsNullOrEmpty(CachedValue)? "": $"<color=red>?</color> ({CachedValue})";
-            }
+            Label.text = AddressableLabelAttributeDrawer.GetAddressableLabelDisplay(CachedValue, labels, true);
         }
     }
 }

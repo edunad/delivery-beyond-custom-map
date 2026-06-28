@@ -21,7 +21,7 @@ namespace SaintsField.Editor.Drawers.DisabledDrawers.ReadOnlyDrawer
         }
 
         protected override Rect DrawAboveImGui(Rect position, SerializedProperty property,
-            GUIContent label, ISaintsAttribute saintsAttribute, OnGUIPayload onGUIPayload, FieldInfo info,
+            GUIContent label, ISaintsAttribute saintsAttribute, int index, FieldInfo info,
             object parent)
         {
             (string error, bool disabled) = IsDisabled(property, info, parent);
@@ -30,9 +30,9 @@ namespace SaintsField.Editor.Drawers.DisabledDrawers.ReadOnlyDrawer
             return position;
         }
 
-        protected override void OnPropertyEndImGui(SerializedProperty property, GUIContent label,
+        protected override void OnPropertyEndImGui(Rect labelFieldRect, SerializedProperty property, GUIContent label,
             ISaintsAttribute saintsAttribute,
-            int saintsIndex, OnGUIPayload onGUIPayload, FieldInfo info, object parent)
+            int saintsIndex, FieldInfo info, object parent)
         {
             EditorGUI.EndDisabledGroup();
         }
@@ -49,7 +49,7 @@ namespace SaintsField.Editor.Drawers.DisabledDrawers.ReadOnlyDrawer
 
         protected override Rect DrawBelow(Rect position, SerializedProperty property, GUIContent label,
             ISaintsAttribute saintsAttribute, int index, IReadOnlyList<PropertyAttribute> allAttributes,
-            OnGUIPayload onGuiPayload, FieldInfo info, object parent)
+            FieldInfo info, object parent)
         {
             // EditorGUI.EndDisabledGroup();
 

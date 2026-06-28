@@ -1,5 +1,268 @@
 # Changelog
 
+## 5.20.0 ##
+
+1.  Fix: More input can be applied by `GUIColor`
+2.  Fix: `ArrowHandleCap` could not correctly pointing at the exactly point
+3.  Fix: Set a bit delay for `MinValue` & `MaxValue` auto correction so when you have both but conflicted values, it now don't trigger a loop call (stack overflow)
+4.  Add: `CompInfoBox` to draw component top info boxes
+5.  Add: `CompText` to draw component top text with `AboveText` behavior
+
+## 5.19.0 ##
+
+1.  Remove "Build in Data" from Addressable group as it's a reserved group by Unity. Adding anything inside will not be accessible
+2.  [IMGUI]: IMGUI overhaul so most attributes work in custom drawers
+3.  Add: Sign unity package as Unity 6 required
+
+## 5.18.9 ##
+
+1.  Add: Support for Unity 6000.5
+2.  Fix: Deprecated error on Unity 6k.5 [#409](https://github.com/TylerTemp/SaintsField/issues/409)
+3.  Fix: Compile error if `SaintsEvent` not enabled
+4.  Fix: `<field=control/>` tag where `control` is not correctly parsed
+
+## 5.18.7 ##
+
+1.  Fix: `AnimatorState` error if the target is a unity object null
+2.  Fix: `Dropdown` now support the old data type and gave an deprecation warning
+
+## 5.18.6 ##
+
+1.  Unity Fix: When nested list view, only one element will be styled as focused, fix [#279](https://github.com/TylerTemp/SaintsField/issues/279)
+2.  Fix: `Table` with all footer buttons hidden, there was an empty container at the footer
+3.  Improve: `ListDrawerSettings` now always have the border with a total number field, just like Unity's default list drawer.
+4.  Improve: `Table` content now styles the same way as Unity's default list drawer
+5.  Add: Support Spine 4.3 [#403](https://github.com/TylerTemp/SaintsField/issues/403)
+6.  Fix: Dropdown broken due to last refactory
+
+## 5.18.4 ##
+
+1.  Improve: When in Horizental layout, if the target drawer is not from SaintsField, and it does return a `BaseField<>` type, the drawer will be break into 2 rows. This effects horizental layout, `SaintsDictionary`, `Table`. [#400](https://github.com/TylerTemp/SaintsField/issues/400)
+2.  Fix: `OnEvent`/`OnButtonClick` now work with search function
+
+## 5.18.3 ##
+
+1.  Rename: Rename dropdown related types to easier remember. The old names can still be used.
+2.  Change: Handles context menu changed to `shift`+`right click` in scene view to avoid conflict with Unity's default context menu
+
+New Name | Old Name                 | Used By
+---------|--------------------------|----------
+`Dropdown<>` | `AdvancedDropdownList<>` | `Dropdown`, `AdvancedDropdown`, `TreeDropdown`
+`MenuDropdown<>` | `DropdownList<>` | `MenuDropdown`
+
+## 5.18.2 ##
+
+1.  Fix: `ShowInInspector` incorrectly handled enum types and gave underlay types instead [#398](https://github.com/TylerTemp/SaintsField/issues/398)
+2.  Fix: "Auto Getters" did not work with `SaintsSerialized` (e.g. interface type)
+3.  Fix: "OnEvent" was not able to actually bind the method due to last refact.
+
+## 5.18.1 ##
+
+1.  Fix: `ShowInInspector` can not properly update field inside a non-UnityObject class/struct type [#395](https://github.com/TylerTemp/SaintsField/issues/395)
+2.  Improve: `ShowInInspector` now use Button to toggle between `null` and instance when there is only one type avaliable for the target type
+3.  Fix: `ShowInInspector` did not clean the UnityObject field when switching from UnityObject type to non-UnityObject type
+4.  Fix: `SaintsHashSet` attribute gave error because it did not work with downpour system [#396](https://github.com/TylerTemp/SaintsField/issues/396)
+
+## 5.18.0 ##
+
+1.  Add: "Runtime Saver" now saves the index of the node for prefab object (instead of plain path) to better find the target object after exit play mode
+2.  Add: "Runtime Saver" now fallback searching the scene's prefabs for the target object if the target can not be found (because of rename, hierarchy changes etc) after exit play mode
+3.  Add: `SliderHandle` scene handle to edit for number / vector types in distance. Useful as a ruler.
+
+## 5.17.5 ##
+
+Fix: Dependency error [#393](https://github.com/TylerTemp/SaintsField/issues/393)
+
+## 5.17.3 ##
+
+1.  Fix: Align logic of field button with `Button`
+2.  Add: `OnEvent` and `OnButtonClick` now has a UI so you can see where it's been bind, and shows error if the bind failed
+3.  Fix: `OnButtonClick` cloud not upwalk/downwalk when `buttonTarget` is a relative path
+
+## 5.17.2 ##
+
+1.  Add: "Runtime Saver" now can save new added component
+2.  Add: "Runtime Saver" now can save if a component need to remove by right click
+3.  Fix: "Runtime Saver" now can find a prefab that is already placed in a scene
+
+## 5.17.1 ##
+
+1.  Fix: "Runtime Saver" didn't write the change to disk, and lost them when restart Unity
+2.  Fix: "Runtime Saver" cloud not write back changes if the target is a scene which are closed when entered editor mode
+3.  Change: `DOTween` support is now disabled by default as `DOTween` refuses to provide a legal `asmdef`, which can break this package. You can follow the setup guild by clicking "Window" - "Saints Field" - "Enable DOTween Support"
+
+## 5.17.0 ##
+
+1.  Add `PrimitiveBoundsHandle` to draw & change rect/bounds types
+2.  Add `RotationHandle` to draw & change `quaternion`, `vector3`, or a roration of an object
+2.  Add `ScaleHandle` to draw & change vector value, number value, or a scale of an object
+
+## 5.16.0 ##
+
+Add: `RadiusHandle` to adjust a radius in the scene. Support setting parent, offset, and colors.
+
+## 5.15.2 ##
+
+`AssetPreview` now support interact if the target is a 3D model, materal etc.
+
+## 5.15.1 ##
+
+1.  `MinValue`/`MaxValue` now support all number types (previously only int/float)
+2.  `MinValue`/`MaxValue` now support all combo number types
+
+**number types**
+
+*   `int`, `uint`, `sbyte`, `byte`, `short`, `ushort`,
+*   `long`, `ulong`
+*   `float`, `double`
+*   `decimal`
+
+**combo types**
+
+*   `Vector2`, `Vector2Int`, `Vector3`, `Vector3Int`, `Vector4`
+*   `Quaternion`
+*   `Color`, `Color32`
+*   `Rect`, `RectInt`
+*   `Bounds`, `BoundsInt`
+*   Custom type which has `x`, `y`, `z`, `w` properties, and they are all number types
+
+## 5.15.0 ##
+
+1.  Add: Support for `Unity.Mathematics` package, you can now use `ShowInInspector`/`Button` to display/edit an `bool4` (and more) types in inspector ~~to play tic-tac-toc~~
+2.  Unity Fix: Unity forget to make a drawer for `Unity.Mathematics.half`. It's now handled by SaintsField
+3.  Fix: `ShowInInspector` no longer shows a dropdown field when no other options avaliable for the target general class/struct
+4.  Fix: `Button` with `IEnumerator` type didn't show errors when any error happens
+5.  Add: `Button` with `IEnumerator`, if none finished successfully, an error icon will show; if some finished successfully (and some failed), a warning icon will show with error messages below. Otherwise shows a success icon.
+
+## 5.14.4 ##
+
+1.  Improve: `ShowInInspector` better UI for general class/struct
+2.  Improve: `ReferencePicker` now can handle more cases when copying data from one type to another
+
+## 5.14.3 ##
+
+1.  Add: `EndText` add `show` parameters to controll it's shown or not [#390](https://github.com/TylerTemp/SaintsField/issues/390)
+2.  Fix: `Button` did not hide the termination button when all `ienumerator`-s finished
+3.  Fix: `ShowInInspector` could not expand a self-referenced (loop-referenced) data
+
+## 5.14.2 ##
+
+1.  Fix: `ParticlePlay` now plays correctly with "Auto Random Seed"
+2.  Add: `ParticlePlay` in play mode now can correctly reflect it's runtime playing status
+3.  Fix: `InfoBox`-`show` callback now support upwalk/downwalk
+
+## 5.14.1 ##
+
+1.  Runtime Saver no longer requires SaintsEditor
+2.  Fix: Component Header failed to display icon on first domain reload
+3.  Runtime Saver icon now has feedback after clicking
+
+## 5.14.0 ##
+
+Add: You can now save component's value when play. after click the "save" icon, the data will be saved to object once you exit the play mode.
+
+Note: This feature might have issues. Please report if you face any.
+
+## 5.13.10 ##
+
+1.  Fix: `SortingLayer` for integer should use id instead of value.
+2.  Add: `SortingLayer` now support auto validator.
+3.  Add: New parameter `bool noFold=false` for `EnumToggleButtons` and `ValueButtons` so they will always expaned
+
+## 5.13.9 ##
+
+Fix: The callback might get an old (not up to date) value when manually assign a serializable class value [#387](https://github.com/TylerTemp/SaintsField/issues/387)
+
+## 5.13.8 ##
+
+1.  Fix: inline buttons gave error when no label is passed [#386](https://github.com/TylerTemp/SaintsField/issues/386)
+2.  Improve: multiline tabs/buttons can not arrange the space better
+
+## 5.13.7 ##
+
+1.  Fix: Enum selector didn't refresh the target and got wrong displayed label in EditorWindow case [#379](https://github.com/TylerTemp/SaintsField/issues/379)
+2.  Improve: Better menu order, and change `SaintsField` to `Saints Field` in menu
+3.  Oh, by the way, "Component Header" is supported by [SaintsHierarchy](https://github.com/TylerTemp/SaintsHierarchy). You can use both/either `HierarchyDraw`/`HierarchyLeftDraw` and `HeaderDraw`/`HeaderLeftDraw` with either type (type from SaintsField or SaintsHierarchy), and it will appear on the target places.
+
+## 5.13.6 ##
+
+1.  Add: `AboveButton`/`BelowButton`/`PostFieldButton` now can show return result, has loading indicator just like `Button`
+2.  Fix: `GetByXPath` now search possible types for `GetComponent`, support sub-types, interfaces [#385](https://github.com/TylerTemp/SaintsField/issues/385)
+3.  Fix: `SortingLayer` now work with `ShowInInspector` and `Button`-s
+
+## 5.13.5 ##
+
+1.  Fix: Code parser custom path was not used correctly on load.
+2.  Add: `Button` now can display the error message if any error happens. This works for both normal method and `IEnumerator` method.
+3.  Add: `Button` with `IEnumerator` now can be manually terminated when it's finished yet.
+4.  Fix: `SaintsSerialized` might failed to deserialize the collection type data and resulted in empty data.
+
+## 5.13.3 ##
+
+1.  Reversed: Move type of `SaintsFieldConfig` from `ScriptableSingleton` back to `ScriptableObject` as in some cases Unity will try to create `Attribute` on load time when `ScriptableSingleton` can not be deserialized at all, and crashes the editor. [#222](https://github.com/TylerTemp/SaintsField/issues/222)
+2.  Fix: `Table` foldout did not have a context menu
+3.  Improve: Better box margin for `LayoutSystem` [#366](https://github.com/TylerTemp/SaintsField/issues/366)
+
+## 5.13.2 ##
+
+1.  Fix: `ResourcePath` now has the correct right-click context menu
+2.  Fix: `ResourceFolder`/`AssetFolder` now supports dragging a folder directly on the field
+3.  Fix: `ResourceFolder`/`AssetFolder` now gives an error if the resource path does not exist
+4.  Add: `ResourceFolder`/`AssetFolder` is now supported in "Auto Validator"
+5.  Add: Support `decimal` type in "Extended Serialization", you can now directly serialize a decimal type with `SaintsSerialized`
+6.  Add: `ShowInInspector` now can display/edit `decimal` type
+
+## 5.13.1 ##
+
+1.  Improve: `Button` now display a success or failed icon depending on the result of the calling function
+2.  Improve: `Button` now support `WaitForSeconds`, `WaitUtil` etc. and `AsyncOperation`, and will give a progress bar when possible
+
+## 5.13.0 ##
+
+1.  Fix: Code parser custom path was not used by field comparer.
+2.  Add: `SaintsDecimal` type for `decimal` serialization.
+
+## 5.12.5 ##
+
+1.  Fix: `SaintsRow` did not work with `OnValueChanged`
+2.  Fix: `SaintsEditor` field order cache didn't get updated when the target script changed
+3.  Fix: `InfoBox` `<field/>` tag not get updated, and did not work with non serialized fields/properties
+4.  Add: You can now set code parser's save folder in `SaintsConfig`, fix [#372](https://github.com/TylerTemp/SaintsField/issues/372)
+5.  Fix: `NavMeshAreaMask` gave an error on integer type [#376](https://github.com/TylerTemp/SaintsField/issues/376)
+
+## 5.12.4 ##
+
+1.  Fix: `AdvancedDropdownList.AddByNames` got `InvalidOperationException` [#375](https://github.com/TylerTemp/SaintsField/issues/375)
+2.  Improve: Cache SaintsEditor field order result with corssing domain reload for a bit better performance
+3.  Add: Support [`SaintsBuild`](https://github.com/TylerTemp/SaintsBuild) information for auto restored assets.
+4.  Change: Move menu from `Window/Saints` to `Tools/SaintsField`
+5.  Fix: Unity 6.5 API changes by [@nnra6864](https://github.com/nnra6864) in [#374](https://github.com/TylerTemp/SaintsField/pull/374)
+
+## 5.12.1 ##
+
+1.  Fix: context menu in old unity did not show correctly, context menu for SaintsArray/SaintsList did not show
+2.  Fix: new gameobjects being spawned whenever a property is reset [@peterdwdawe](https://github.com/peterdwdawe), [PR#371](https://github.com/TylerTemp/SaintsField/pull/371)
+3.  Add: `ResizableTextArea` support `ShowInInspector` and `Button`
+4.  Fix: reset context menu shows uppercase if a variable name starts with `_`, remove the `k__BackingField` information.
+
+About this version:
+
+The "Downpour" system is still WIP. My personal test seems the change does not affect other functions so I'm removing the "preview" tag.
+
+## 5.12.0-preview.0 ##
+
+1.  Fix: USS warning [#369](https://github.com/TylerTemp/SaintsField/issues/369)
+2.  Fix: URP IMGUI editor rendering flicking on slider [#364](https://github.com/TylerTemp/SaintsField/pull/364)
+3.  Improve: Cache SaintsEditor field order result for a bit better performance
+
+About this preview:
+
+This preview contains a new system called "downpour", with `ValueAttribute` which allows inject attribute for nested types like `SaintsArray`.
+
+This feature is still experimental and will not be documented ATM.
+
+As this release contains core code changes for rendering, it might break the rendering flow. Upgrade with cation.
+
 ## 5.11.4 ##
 
 1.  Fix: Prefab view dropdown(advanceddropdwn/treedropdown) in inspector failed on second selection [#367](https://github.com/TylerTemp/SaintsField/issues/367)
@@ -13,7 +276,7 @@
 
 ## 5.11.2 ##
 
-1.  Fix: dropdown button for URP editor now can detect `SupportedOnRendererAttribute` and allows for inherented from `SaintsScriptableRendererData`. Fix URP editor title text overflow when it's too long. Fix IMGUI based editor can not be saved under URP editor. [#363](https://github.com/TylerTemp/SaintsField/issues/363) 
+1.  Fix: dropdown button for URP editor now can detect `SupportedOnRendererAttribute` and allows for inherented from `SaintsScriptableRendererData`. Fix URP editor title text overflow when it's too long. Fix IMGUI based editor can not be saved under URP editor. [#363](https://github.com/TylerTemp/SaintsField/issues/363)
 2.  Add a warning for Unity 6000+ about building support [#362](https://github.com/TylerTemp/SaintsField/issues/362)
 
 ## 5.11.0 ##

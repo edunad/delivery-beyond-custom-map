@@ -1,6 +1,7 @@
-#if UNITY_2021_3_OR_NEWER && !SAINTSFIELD_UI_TOOLKIT_DISABLE
+#if UNITY_2021_3_OR_NEWER
 using System;
 using SaintsField.Editor.Playa;
+using SaintsField.Editor.Utils;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 
@@ -21,20 +22,27 @@ namespace SaintsField.Editor
 
         private ToolbarSearchField _toolbarSearchField;
 
-        private SaintsEditorCore _coreEditor;
+#if !SAINTSFIELD_UI_TOOLKIT_DISABLE
 
         public override VisualElement CreateInspectorGUI()
         {
             _saintsEditorIMGUI = false;
             _coreEditor = new SaintsEditorCore(this, EditorShowMonoScript, this);
+            // VisualElement root = new VisualElement();
             VisualElement root = _coreEditor.CreateInspectorGUI();
 
-#if DOTWEEN && !SAINTSFIELD_DOTWEEN_DISABLED
+#if DOTWEEN && SAINTSFIELD_DOTWEEN_ENABLE
             root.RegisterCallback<AttachToPanelEvent>(_ => AddInstance(this));
             root.RegisterCallback<DetachFromPanelEvent>(_ => RemoveInstance(this));
 #endif
+            UIToolkitUtils.OnAttachToPanelOnce(root, _ =>
+            {
+                root.schedule.Execute(() => HeaderGUI.DrawHeaderGUI.EnsureInitLoad()).StartingIn(500);
+            });
+
             return root;
         }
+#endif
 
         private void OnDestroyUIToolkit()
         {

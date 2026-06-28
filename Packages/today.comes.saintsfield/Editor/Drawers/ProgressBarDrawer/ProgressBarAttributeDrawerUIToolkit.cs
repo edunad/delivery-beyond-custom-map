@@ -109,7 +109,7 @@ namespace SaintsField.Editor.Drawers.ProgressBarDrawer
             }
             else
             {
-                (string getError, object getValue) =
+                (string getError, MemberInfo _, object getValue) =
                     Util.GetOf<object>(progressBarAttribute.MinCallback, 0, property, info, parent, null);
                 if (getError != "")
                 {
@@ -127,7 +127,7 @@ namespace SaintsField.Editor.Drawers.ProgressBarDrawer
             }
             else
             {
-                (string getError, object getValue) =
+                (string getError, MemberInfo _, object getValue) =
                     Util.GetOf<object>(progressBarAttribute.MaxCallback, 0f, property, info, parent, null);
                 if (getError != "")
                 {
@@ -511,7 +511,7 @@ namespace SaintsField.Editor.Drawers.ProgressBarDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -558,7 +558,7 @@ namespace SaintsField.Editor.Drawers.ProgressBarDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -605,7 +605,7 @@ namespace SaintsField.Editor.Drawers.ProgressBarDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -652,7 +652,7 @@ namespace SaintsField.Editor.Drawers.ProgressBarDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -699,7 +699,7 @@ namespace SaintsField.Editor.Drawers.ProgressBarDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -742,7 +742,7 @@ namespace SaintsField.Editor.Drawers.ProgressBarDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -790,7 +790,7 @@ namespace SaintsField.Editor.Drawers.ProgressBarDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)

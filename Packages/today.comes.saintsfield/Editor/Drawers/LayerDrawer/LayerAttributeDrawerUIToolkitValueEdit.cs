@@ -1,3 +1,4 @@
+#if UNITY_2021_2_OR_NEWER
 using System;
 using System.Collections.Generic;
 using SaintsField.Editor.UIToolkitElements;
@@ -27,7 +28,7 @@ namespace SaintsField.Editor.Drawers.LayerDrawer
                     value = value.value,
                 };
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(element, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(element, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -60,7 +61,7 @@ namespace SaintsField.Editor.Drawers.LayerDrawer
             IntDropdownField element = new IntDropdownField(label, intDropdownElement);
             intDropdownElement.BindDrop(element);
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(element, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(element, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -95,7 +96,7 @@ namespace SaintsField.Editor.Drawers.LayerDrawer
             StringDropdownField element = new StringDropdownField(label, stringDropdownElement);
             stringDropdownElement.BindDrop(element);
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(element, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(element, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -112,3 +113,4 @@ namespace SaintsField.Editor.Drawers.LayerDrawer
         }
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if UNITY_2021_3_OR_NEWER
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -72,7 +73,7 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
 
                 UIToolkitFieldWrapper uiToolkitFieldWrapper = new UIToolkitFieldWrapper(label, visualInput);
                 Add(uiToolkitFieldWrapper);
-                UIToolkitUtils.UIToolkitValueEditAfterProcess(uiToolkitFieldWrapper, setterOrNull,
+                UIToolkitUtils.UIToolkitValueEditAfterProcess(uiToolkitFieldWrapper, setterOrNull != null,
                     labelGrayColor, inHorizontalLayout);
 
                 SubPanel = new VisualElement
@@ -82,10 +83,14 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
                 Add(SubPanel);
 
                 FlagButtonsArrangeElement.BindSubContainer(SubPanel);
+                FlagButtonsArrangeElement.SetGreedy(!LeftExpandButton.value);
 
                 // LeftExpandButton leftExpandButton = container.Q<LeftExpandButton>(name: NameExpand(property));
                 LeftExpandButton.RegisterValueChangedCallback(evt =>
-                    FlagButtonFullToggleGroupElement.ToFullToggles(evt.newValue));
+                {
+                    FlagButtonsArrangeElement.SetGreedy(!evt.newValue);
+                    FlagButtonFullToggleGroupElement.ToFullToggles(evt.newValue);
+                });
                 FlagButtonFullToggleGroupElement.ToFullToggles(LeftExpandButton.value);
 
                 List<ValueButtonRawInfo> rawInfos = new List<ValueButtonRawInfo>();
@@ -157,7 +162,10 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
             wrapper.FlagButtonsArrangeElement.schedule.Execute(() =>
             {
                 wrapper.LeftExpandButton.RegisterValueChangedCallback(evt =>
-                    wrapper.SubPanel.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None);
+                {
+                    wrapper.FlagButtonsArrangeElement.SetGreedy(!evt.newValue);
+                    wrapper.SubPanel.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None;
+                });
                 wrapper.FlagButtonsArrangeElement.OnCalcArrangeDoneAddListener(hasSubRow =>
                 {
                     // Debug.Log("DONE CALC");
@@ -215,3 +223,4 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
         }
     }
 }
+#endif

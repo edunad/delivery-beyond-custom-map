@@ -25,15 +25,8 @@ namespace SaintsField.Editor.Playa.Renderer.PlayaFullWidthRichLabelFakeRenderer
             return _richTextDrawer;
         }
 
-        protected override void RenderTargetIMGUI(float width, PreCheckResult preCheckResult)
+        public override void OnDestroyIMGUI()
         {
-            float height = GetHeightIMGUI(width);
-            if (height <= Mathf.Epsilon)
-            {
-                return;
-            }
-            Rect rect = EditorGUILayout.GetControlRect(true, height, GUILayout.ExpandWidth(true));
-            RenderPositionTargetIMGUI(rect, preCheckResult);
         }
 
         protected override float GetFieldHeightIMGUI(float width, PreCheckResult preCheckResult)
@@ -61,8 +54,7 @@ namespace SaintsField.Editor.Playa.Renderer.PlayaFullWidthRichLabelFakeRenderer
 
             (MemberInfo memberInfo, string label) = GetMemberAndLabel(FieldWithInfo);
 
-            IEnumerable<RichTextDrawer.RichTextChunk> xml = RichTextDrawer.ParseRichXml(content, label, FieldWithInfo.SerializedProperty, memberInfo,
-                FieldWithInfo.Targets[0]);
+            IEnumerable<RichTextDrawer.RichTextChunk> xml = RichTextDrawer.ParseRichXmlWithProvider(content, this);
             float fullWidth = GetRichTextDrawer().GetWidth(new GUIContent(label), EditorGUIUtility.singleLineHeight, xml);
             return Mathf.CeilToInt(Mathf.Max(1, fullWidth / width)) * EditorGUIUtility.singleLineHeight;
         }
@@ -107,8 +99,7 @@ namespace SaintsField.Editor.Playa.Renderer.PlayaFullWidthRichLabelFakeRenderer
 
             (MemberInfo memberInfo, string label) = GetMemberAndLabel(FieldWithInfo);
 
-            IEnumerable<RichTextDrawer.RichTextChunk> xml = RichTextDrawer.ParseRichXml(content, label, FieldWithInfo.SerializedProperty, memberInfo,
-                FieldWithInfo.Targets[0]);
+            IEnumerable<RichTextDrawer.RichTextChunk> xml = RichTextDrawer.ParseRichXmlWithProvider(content, this);
 
             RichTextDrawer richDrawer = GetRichTextDrawer();
             float x = position.x;
@@ -118,7 +109,7 @@ namespace SaintsField.Editor.Playa.Renderer.PlayaFullWidthRichLabelFakeRenderer
             {
                 float charWidth = richDrawer.GetWidth(labelContent, EditorGUIUtility.singleLineHeight, new[]{richTextChunk});
                 Rect rect = new Rect(x, y, charWidth, EditorGUIUtility.singleLineHeight);
-                richDrawer.DrawChunks(rect, labelContent, new[]{richTextChunk});
+                richDrawer.DrawChunks(rect, new[]{richTextChunk});
 
                 x += charWidth;
 

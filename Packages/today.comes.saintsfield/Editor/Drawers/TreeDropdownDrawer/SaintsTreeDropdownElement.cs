@@ -97,7 +97,14 @@ namespace SaintsField.Editor.Drawers.TreeDropdownDrawer
 
             Add(treeContainer);
             _scrollView = treeContainer;
-            treeContainer.RegisterCallback<GeometryChangedEvent>(OnTreeGeometryChanged);
+            // treeContainer.RegisterCallback<GeometryChangedEvent>(OnGeometryChangedReCalcScroll);
+            _scrollView.contentContainer.RegisterCallback<GeometryChangedEvent>(OnGeometryChangedReCalcScroll);
+            RegisterCallback<AttachToPanelEvent>(AttachToPanelEventReCalcScroll);
+
+            // treeContainer.RegisterCallback<AttachToPanelEvent>(_ =>
+            // {
+            //
+            // });
 
 #if UNITY_6000_0_OR_NEWER
             _toolbarSearchField.placeholderText = "Search";
@@ -275,9 +282,13 @@ namespace SaintsField.Editor.Drawers.TreeDropdownDrawer
             });
         }
 
+        private void AttachToPanelEventReCalcScroll(AttachToPanelEvent evt) => ReCalcScroll();
+
         private bool _hasHorizontalScrollerOnce;
 
-        private void OnTreeGeometryChanged(GeometryChangedEvent evt)
+        private void OnGeometryChangedReCalcScroll(GeometryChangedEvent evt) => ReCalcScroll();
+
+        private void ReCalcScroll()
         {
             // Debug.Log(_scrollView.horizontalScroller);
             float width = _scrollView.horizontalScroller.resolvedStyle.width;
@@ -354,7 +365,7 @@ namespace SaintsField.Editor.Drawers.TreeDropdownDrawer
             }
         }
 
-        private IReadOnlyList<TreeRowAbsElement> MakeNestedTreeRow(int indent, IAdvancedDropdownList dropdownLis, ICollection<object> curValues)
+        private IReadOnlyList<TreeRowAbsElement> MakeNestedTreeRow(int indent, IDropdown dropdownLis, ICollection<object> curValues)
         {
             List<TreeRowAbsElement> result = new List<TreeRowAbsElement>(dropdownLis.Count);
 
@@ -363,7 +374,7 @@ namespace SaintsField.Editor.Drawers.TreeDropdownDrawer
             // int incrId = accId;
             // bool isEmptyNode = true;
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (IAdvancedDropdownList dropdownItem in dropdownLis)
+            foreach (IDropdown dropdownItem in dropdownLis)
             {
                 if (dropdownItem.isSeparator)
                 {
@@ -397,7 +408,7 @@ namespace SaintsField.Editor.Drawers.TreeDropdownDrawer
                     continue;
                 }
 
-                // (List<TreeViewItemData<IAdvancedDropdownList>> children, int resultId, bool childSelect) = MakeNestedItems(dropdownItem, curValues, incrId, selectedNestedIds, selectedValueIds);
+                // (List<TreeViewItemData<IDropdown>> children, int resultId, bool childSelect) = MakeNestedItems(dropdownItem, curValues, incrId, selectedNestedIds, selectedValueIds);
                 IReadOnlyList<TreeRowAbsElement> tailResult = MakeNestedTreeRow(indent + 1, dropdownItem, curValues);
 
                 if (dropdownItem.ChildCount() > 0 && tailResult.Count == 0)

@@ -111,11 +111,13 @@ namespace SaintsField.Editor.HeaderGUI.Drawer
                         {
                             returnResult = property.GetValue(target);
                         }
+#pragma warning disable CS0168 // Variable is declared but never used
                         catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
                         {
-    #if SAINTSFIELD_DEBUG
+#if SAINTSFIELD_DEBUG
                             Debug.LogException(e.InnerException ?? e);
-    #endif
+#endif
                             return (false, default);
                         }
 
@@ -130,7 +132,7 @@ namespace SaintsField.Editor.HeaderGUI.Drawer
             }
             else if(headerLabelAttribute.IsCallback)
             {
-                (string error, object result) = Util.GetOf<object>(headerLabelAttribute.Label, null, null, renderTargetInfo.MemberInfo, target, null);
+                (string error, MemberInfo _, object result) = Util.GetOf<object>(headerLabelAttribute.Label, null, null, renderTargetInfo.MemberInfo, target, null);
                 if (error != "")
                 {
 #if SAINTSFIELD_DEBUG
@@ -153,7 +155,7 @@ namespace SaintsField.Editor.HeaderGUI.Drawer
             if(rawLabel.Contains("<field") || !ParsedXmlCache.TryGetValue(rawLabel, out IReadOnlyList<RichTextDrawer.RichTextChunk> labelChunks))
             {
                 ParsedXmlCache[rawLabel] = labelChunks =
-                    RichTextDrawer.ParseRichXml(rawLabel, labelName, null, renderTargetInfo.MemberInfo, target).ToArray();
+                    RichTextDrawer.ParseRichXmlWithProvider(rawLabel, new HeaderGUIRichTextProvider(labelName, renderTargetInfo, target)).ToArray();
             }
 
             RichTextDrawer richTextDrawer = CacheAndUtil.GetCachedRichTextDrawer();
@@ -171,7 +173,7 @@ namespace SaintsField.Editor.HeaderGUI.Drawer
                 width = usedRect.width - 4,
             };
 
-            richTextDrawer.DrawChunks(labelRect, oldLabel, labelChunks);
+            richTextDrawer.DrawChunks(labelRect, labelChunks);
 
             return (true, new HeaderUsed(usedRect));
         }

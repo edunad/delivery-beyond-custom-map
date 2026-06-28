@@ -13,16 +13,12 @@ namespace SaintsField.Editor.Playa.Renderer
         }
 
         protected override bool AllowGuiColor => true;
-        public override void OnDestroy()
-        {
-
-        }
 
         public override void OnSearchField(string searchString)
         {
         }
 
-        protected override void RenderTargetIMGUI(float width, PreCheckResult preCheckResult)
+        public override void OnDestroyIMGUI()
         {
         }
 
@@ -35,10 +31,15 @@ namespace SaintsField.Editor.Playa.Renderer
         {
         }
 
-        protected override (VisualElement target, bool needUpdate) CreateTargetUIToolkit(VisualElement inspectorRoot,
-            VisualElement container)
+#if UNITY_2021_3_OR_NEWER
+        public override void OnDestroyUIToolkit()
+        {
+        }
+
+        protected override (VisualElement target, bool needUpdate) CreateTargetUIToolkit(VisualElement inspectorRoot, VisualElement container)
         {
             return (null, false);
         }
+#endif
     }
 }

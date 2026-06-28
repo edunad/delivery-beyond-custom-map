@@ -1,4 +1,4 @@
-#if UNITY_2021_3_OR_NEWER
+#if UNITY_2021_3_OR_NEWER && !SAINTSFIELD_UI_TOOLKIT_DISABLE
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,10 +70,8 @@ namespace SaintsField.Editor.Drawers.Addressable.AddressableSceneDrawer
 
             addressableSceneElement.SceneFieldDropChanged.AddListener(newValue =>
             {
-                property.stringValue = newValue;
-                property.serializedObject.ApplyModifiedProperties();
-                onValueChangedCallback.Invoke(newValue);
-                ReflectUtils.SetValue(property.propertyPath, property.serializedObject.targetObject, info, parent, newValue);
+                ApplyAddressableSceneSelection(property, info, parent, newValue,
+                    changedValue => onValueChangedCallback.Invoke(changedValue));
             });
 
             addressableSceneElement.Button.clicked += () =>
@@ -97,9 +95,8 @@ namespace SaintsField.Editor.Drawers.Addressable.AddressableSceneDrawer
                     {
                         AddressableAssetEntry entry = (AddressableAssetEntry)curItem;
                         string newValue = entry?.address ?? "";
-                        property.stringValue = newValue;
-                        property.serializedObject.ApplyModifiedProperties();
-                        onValueChangedCallback.Invoke(newValue);
+                        ApplyAddressableSceneSelection(property, info, parent, newValue,
+                            changedValue => onValueChangedCallback.Invoke(changedValue));
                         return null;
                     }
                 ));

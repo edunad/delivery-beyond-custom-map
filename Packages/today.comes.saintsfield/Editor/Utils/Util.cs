@@ -5,8 +5,10 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using SaintsField.Condition;
+using SaintsField.Editor.Core;
 using SaintsField.Editor.Linq;
 using SaintsField.Editor.Playa.Renderer.BaseRenderer;
+using SaintsField.Interfaces;
 using SaintsField.Playa;
 using SaintsField.SaintsSerialization;
 using SaintsField.Utils;
@@ -22,7 +24,9 @@ namespace SaintsField.Editor.Utils
 {
     public static class Util
     {
-        public const string SerializedFieldName = "_saintsSerializedProperties";
+        // public const string SerializedFieldName = "_saintsSerializedProperties";
+        public const string SaintsSerializedLabelSuffix = "__Saints Serialized__";
+        public const string SaintsSerializedVarSuffix = "__SaintsSerialized__";
 
         public static readonly string[] ResourceSearchFolder = {
             "Assets/Editor Default Resources/SaintsField",
@@ -52,6 +56,7 @@ namespace SaintsField.Editor.Utils
                     Texture2D r = EditorGUIUtility.IconContent(resourcePath).image as Texture2D;
                     if (r)
                     {
+                        // Debug.Log($"load {resourcePath} as IconContent: {r}");
                         result = r as T;
                     }
                 }
@@ -145,7 +150,7 @@ namespace SaintsField.Editor.Utils
             }
             else if (value is Enum)
             {
-                numericValue = Convert.ToInt64(value);;
+                numericValue = Convert.ToInt64(value);
             }
             else
             {
@@ -689,7 +694,9 @@ namespace SaintsField.Editor.Utils
                 {
                     equalCalledResult = itemValue == curValue;
                 }
+#pragma warning disable CS0168 // Variable is declared but never used
                 catch (Exception e2)
+#pragma warning restore CS0168 // Variable is declared but never used
                 {
 #if SAINTSFIELD_DEBUG
                     Debug.LogException(e2);
@@ -784,7 +791,7 @@ namespace SaintsField.Editor.Utils
         //         : ("", ReflectUtils.Truly(value));
         // }
 
-        public static (string error, T result) GetOf<T>(string by, T defaultValue, SerializedProperty property, MemberInfo memberInfo, object target, IReadOnlyList<object> overrideParams)
+        public static (string error, MemberInfo memberInfo, T result) GetOf<T>(string by, T defaultValue, SerializedProperty property, MemberInfo memberInfo, object target, IReadOnlyList<object> overrideParams)
         {
             if (by.StartsWith(":"))
             {
@@ -794,7 +801,7 @@ namespace SaintsField.Editor.Utils
 
             if (target == null)
             {
-                return ("Target is null", defaultValue);
+                return ("Target is null", null, defaultValue);
             }
 
             return by.Contains(".")
@@ -802,7 +809,7 @@ namespace SaintsField.Editor.Utils
                 : FlatGetOf(by, defaultValue, property, memberInfo, target, overrideParams);
         }
 
-        private static (string error, T result) AccGetOf<T>(string by, T defaultValue, SerializedProperty property,
+        private static (string error, MemberInfo memberInfo, T result) AccGetOf<T>(string by, T defaultValue, SerializedProperty property,
             object parent, IReadOnlyList<object> overrideParams)
         {
             string accBy = by;
@@ -814,7 +821,7 @@ namespace SaintsField.Editor.Utils
                 (error, accBy, accParent) = UpwardWalk(by, property, parent);
                 if (error != "")
                 {
-                    return (error, defaultValue);
+                    return (error, null, defaultValue);
                 }
             }
 
@@ -827,7 +834,7 @@ namespace SaintsField.Editor.Utils
             // Debug.Log($"looking for {accBy} in {accParent}");
 
             // MemberInfo accMemberInfo = memberInfo;
-            (string error, T result) thisResult = ("No Attributes", defaultValue);
+            (string error, MemberInfo memberInfo, T result) thisResult = ("No Attributes", null, defaultValue);
 
             foreach (string attrName in accBy.Split(SerializedUtils.DotSplitSeparator))
             {
@@ -858,7 +865,7 @@ namespace SaintsField.Editor.Utils
 
         }
 
-        public static (string error, T result) FlatGetOf<T>(string by, T defaultValue, SerializedProperty property, MemberInfo memberInfo, object target, IReadOnlyList<object> overrideParams)
+        public static (string error, MemberInfo memberInfo, T result) FlatGetOf<T>(string by, T defaultValue, SerializedProperty property, MemberInfo memberInfo, object target, IReadOnlyList<object> overrideParams)
         {
             if (by.StartsWith(":"))
             {
@@ -868,13 +875,13 @@ namespace SaintsField.Editor.Utils
 
             if (target == null)
             {
-                return ("Target is null", defaultValue);
+                return ("Target is null", null, defaultValue);
             }
 
             foreach (Type type in ReflectUtils.GetSelfAndBaseTypesFromInstance(target))
             {
                 ReflectUtils.GetPropType getPropType;
-                object fieldOrMethodInfo;
+                MemberInfo fieldOrMethodInfo;
                 try
                 {
                     (getPropType, fieldOrMethodInfo) = ReflectUtils.GetProp(type, by);
@@ -890,11 +897,15 @@ namespace SaintsField.Editor.Utils
                             (string methodError, object methodReturnValue) = InvokeMethodInfo(methodInfo, defaultValue, property, memberInfo, target, overrideParams);
                             if (methodError == "")
                             {
-                                return ConvertTo(methodReturnValue, defaultValue);
+                                (string error, T result) methodConvert = ConvertTo(methodReturnValue, defaultValue);
+                                return (methodConvert.error, methodInfo, methodConvert.result);
                             }
                         }
                     }
-                    return ($"All method failed to match the signature: {string.Join("; ", methodInfos.Select(eachMethod => $"({string.Join(", ", eachMethod.GetParameters().Select(each => $"{each.ParameterType} {each.Name}{(each.HasDefaultValue? $"={each.DefaultValue}": "")}"))}) => {eachMethod.ReturnParameter}"))}", defaultValue);
+                    return (
+                        $"All method failed to match the signature: {string.Join("; ", methodInfos.Select(eachMethod => $"({string.Join(", ", eachMethod.GetParameters().Select(each => $"{each.ParameterType} {each.Name}{(each.HasDefaultValue? $"={each.DefaultValue}": "")}"))}) => {eachMethod.ReturnParameter}"))}",
+                        null,
+                        defaultValue);
                 }
 
                 object genResult;
@@ -920,7 +931,7 @@ namespace SaintsField.Editor.Utils
                         (string methodError, object methodReturnValue) = InvokeMethodInfo(methodInfo, defaultValue, property, memberInfo, target, overrideParams);
                         if (methodError != "")
                         {
-                            return (methodError, defaultValue);
+                            return (methodError, methodInfo, defaultValue);
                         }
 
                         genResult = methodReturnValue;
@@ -932,13 +943,15 @@ namespace SaintsField.Editor.Utils
                 }
 
                 // Debug.Log($"GetOf {genResult}/{genResult?.GetType()}/{genResult==null}");
-                return ConvertTo(genResult, defaultValue);
+                var r = ConvertTo(genResult, defaultValue);
+                return (r.error, fieldOrMethodInfo, r.result);
             }
 
-            return ($"No field or method named `{by}` found on `{target}`", defaultValue);
+            return ($"No field or method named `{by}` found on `{target}`", null, defaultValue);
         }
 
         // this can not walk out of the
+        // ReSharper disable once UnusedParameter.Local
         private static (string error, string by, object parent) UpwardWalk(string by, SerializedProperty property, object parent)
         {
             Debug.Assert(by.StartsWith("../"));
@@ -1131,11 +1144,13 @@ namespace SaintsField.Editor.Utils
                                         {
                                             targetFieldOrProp.FieldInfo.SetValue(targetParent, target);
                                         }
+#pragma warning disable CS0168 // Variable is declared but never used
                                         catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
                                         {
-    #if SAINTSFIELD_DEBUG
+#if SAINTSFIELD_DEBUG
                                             Debug.LogException(e);
-    #endif
+#endif
                                         }
                                     }
                                 }
@@ -1153,11 +1168,14 @@ namespace SaintsField.Editor.Utils
                                         {
                                             targetFieldOrProp.PropertyInfo.SetValue(targetParent, target);
                                         }
+#pragma warning disable CS0168 // Variable is declared but never used
                                         catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
                                         {
-    #if SAINTSFIELD_DEBUG
+                                            // ignored
+#if SAINTSFIELD_DEBUG
                                             Debug.LogException(e);
-    #endif
+#endif
                                         }
                                     }
                                 }
@@ -1180,8 +1198,11 @@ namespace SaintsField.Editor.Utils
                     {
                         arr.SetValue(target, insideArrayIndex);
                     }
+#pragma warning disable CS0168 // Variable is declared but never used
                     catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
                     {
+                        // ignored
 #if SAINTSFIELD_DEBUG
                         Debug.LogException(e);
 #endif
@@ -1194,8 +1215,11 @@ namespace SaintsField.Editor.Utils
                     {
                         lis[insideArrayIndex] = target;
                     }
+#pragma warning disable CS0168 // Variable is declared but never used
                     catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
                     {
+                        // ignored
 #if SAINTSFIELD_DEBUG
                         Debug.LogException(e);
 #endif
@@ -1217,13 +1241,13 @@ namespace SaintsField.Editor.Utils
                 : assembly.GetTypes().FirstOrDefault(t => t.Name == split[0]);
         }
 
-        private static (string error, T result) GetOfStatic<T>(string nameSpaceAndName, T defaultValue, SerializedProperty property, MemberInfo memberInfo, object target, IReadOnlyList<object> overrideParams)
+        private static (string error, MemberInfo memberInfo, T result) GetOfStatic<T>(string nameSpaceAndName, T defaultValue, SerializedProperty property, MemberInfo memberInfo, object target, IReadOnlyList<object> overrideParams)
         {
             List<string> split = new List<string>(nameSpaceAndName.Split('.'));
             int totalLength = split.Count;
             if (totalLength == 0)
             {
-                return ($"Static/Const callback must be in form of `Namespace.ClassName.FieldNameOrMethodName` or `ClassName.FieldNameOrMethodName`, get {nameSpaceAndName}", defaultValue);
+                return ($"Static/Const callback must be in form of `Namespace.ClassName.FieldNameOrMethodName` or `ClassName.FieldNameOrMethodName`, get {nameSpaceAndName}", null, defaultValue);
             }
 
             bool fullSearch = totalLength > 1;
@@ -1255,7 +1279,7 @@ namespace SaintsField.Editor.Utils
             }
             if (type == null)
             {
-                return ($"type name `{string.Join(".", split)}` not found", defaultValue);
+                return ($"type name `{string.Join(".", split)}` not found", null, defaultValue);
             }
 
             const BindingFlags bindAttr = BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public |
@@ -1275,10 +1299,11 @@ namespace SaintsField.Editor.Utils
 #if SAINTSFIELD_DEBUG
                     Debug.LogException(e);
 #endif
-                    return (e.Message, defaultValue);
+                    return (e.Message, null, defaultValue);
                 }
 
-                return ConvertTo(genResult, defaultValue);
+                (string error, T result) r = ConvertTo(genResult, defaultValue);
+                return (r.error, fieldInfo, r.result);
             }
 
             PropertyInfo propertyInfo = type.GetProperty(fieldOrMethod, bindAttr);
@@ -1294,10 +1319,11 @@ namespace SaintsField.Editor.Utils
 #if SAINTSFIELD_DEBUG
                     Debug.LogException(e);
 #endif
-                    return (e.Message, defaultValue);
+                    return (e.Message, null, defaultValue);
                 }
 
-                return ConvertTo(genResult, defaultValue);
+                (string error, T result) r = ConvertTo(genResult, defaultValue);
+                return (r.error, propertyInfo, r.result);
             }
 
             MethodInfo[] methodInfos = type.GetMethods(bindAttr);
@@ -1306,10 +1332,11 @@ namespace SaintsField.Editor.Utils
 #if SAINTSFIELD_DEBUG
                 Debug.LogWarning($"No field, property or method found for {nameSpaceAndName}");
 #endif
-                return ($"No field, property or method found for {nameSpaceAndName}", defaultValue);
+                return ($"No field, property or method found for {nameSpaceAndName}", null, defaultValue);
             }
 
             List<string> errors = new List<string>();
+            MethodInfo foundMethodInfo = null;
             foreach (MethodInfo methodInfo in methodInfos)
             {
                 if(methodInfo.Name == fieldOrMethod)
@@ -1318,9 +1345,11 @@ namespace SaintsField.Editor.Utils
                         InvokeMethodInfo(methodInfo, defaultValue, property, memberInfo, target, overrideParams);
                     if (error == "")
                     {
-                        return ConvertTo(returnValue, defaultValue);
+                        (string error, T result) r = ConvertTo(returnValue, defaultValue);
+                        return (r.error, memberInfo, r.result);
                     }
 
+                    foundMethodInfo = methodInfo;
                     errors.Add(error);
                 }
             }
@@ -1357,10 +1386,11 @@ namespace SaintsField.Editor.Utils
 #if SAINTSFIELD_DEBUG
                                 Debug.LogException(e);
 #endif
-                                return (e.Message, defaultValue);
+                                return (e.Message, null, defaultValue);
                             }
 
-                            return ConvertTo(genResult, defaultValue);
+                            var r = ConvertTo(genResult, defaultValue);
+                            return (r.error, foundMethodInfo, r.result);
                         }
                     }
 
@@ -1368,7 +1398,7 @@ namespace SaintsField.Editor.Utils
 #if SAINTSFIELD_DEBUG
                 Debug.LogWarning($"No method/field/property {fieldOrMethod} found for {string.Join(".", split)}");
 #endif
-                return ($"No method/field/property {fieldOrMethod} found for {string.Join(".", split)}", defaultValue);
+                return ($"No method/field/property {fieldOrMethod} found for {string.Join(".", split)}", null, defaultValue);
             }
 
             string finalError = string.Join("\n", errors);
@@ -1377,7 +1407,7 @@ namespace SaintsField.Editor.Utils
             Debug.LogWarning(finalError);
 #endif
 
-            return (finalError, defaultValue);
+            return (finalError, null, defaultValue);
         }
 
         // public static (string error, T result) GetMethodOf<T>(string by, T defaultValue, SerializedProperty property, MemberInfo memberInfo, object target)
@@ -1944,7 +1974,19 @@ namespace SaintsField.Editor.Utils
 
                 if(!foundResult)
                 {
-                    (string error, object getResult) = GetOf<object>(conditionStringTarget, null, property, info, target, null);
+                    // object useParent = parent;
+                    // (SerializedUtils.FieldOrProp _, object refreshedParent) =
+                    //     SerializedUtils.GetFieldInfoAndDirectParent(property);
+                    // target = refreshedParent;
+                    // if (refreshedParent != null)
+                    // {
+                    //     // Debug.Log($"rewrite parent {refreshedParent}");
+                    //     useParent = refreshedParent;
+                    // }
+                    (string error, MemberInfo _, object getResult) = GetOf<object>(conditionStringTarget, null, property, info, target, null);
+
+                    // Debug.Log(
+                    //     $"getting {conditionStringTarget} of target {conditionInfo.Target} on parent {target} on ser {property.serializedObject.targetObject} = {getResult}, error={error}");
 
                     if (error != "")
                     {
@@ -1967,7 +2009,7 @@ namespace SaintsField.Editor.Utils
                     }
                     else
                     {
-                        (string errorValue, object callbackResult) =
+                        (string errorValue, MemberInfo _, object callbackResult) =
                             GetOf<object>((string)value, null, property, info, target, null);
                         if (errorValue != "")
                         {
@@ -2264,8 +2306,20 @@ namespace SaintsField.Editor.Utils
             {
                 rawValue = ((PropertyInfo)fieldInfo).GetValue(parent);
             }
+            else if (fieldInfo.MemberType == MemberTypes.Method)
+            {
+                try
+                {
+                    rawValue = ((MethodInfo)fieldInfo).Invoke(parent, null);
+                }
+                catch (Exception e)
+                {
+                    return (e.InnerException?.Message ?? e.Message, -1, null);
+                }
+            }
             else
             {
+                Debug.LogError($"MemberInfo is of type {fieldInfo.MemberType}");
                 return ($"Unable to get value from {fieldInfo} ({fieldInfo.MemberType})", -1, null);
             }
 
@@ -2451,7 +2505,7 @@ namespace SaintsField.Editor.Utils
             {
                 return new TargetWorldPosInfo
                 {
-                    Error = $"Property disposed",
+                    Error = "Property disposed",
                 };
             }
 
@@ -2558,7 +2612,7 @@ namespace SaintsField.Editor.Utils
                 };
             }
 
-            (string callbackError, object value) = GetOf<object>(space, null, property, info, parent, null);
+            (string callbackError, MemberInfo _, object value) = GetOf<object>(space, null, property, info, parent, null);
             if (callbackError != "")
             {
                 return new TargetWorldPosInfo
@@ -2708,7 +2762,7 @@ namespace SaintsField.Editor.Utils
             }
 
             string targetLower = target.ToLower();
-            return search.ToLower().Split(new [] { ' ' }, StringSplitOptions.RemoveEmptyEntries).All(searchSegment => targetLower.Contains(searchSegment));
+            return search.ToLower().Split(new [] { ' ' }, StringSplitOptions.RemoveEmptyEntries).All(targetLower.Contains);
         }
 
         private static readonly Regex EnumLabelRegex = new Regex(@"<label\s*/?>", RegexOptions.Compiled);
@@ -2837,7 +2891,9 @@ namespace SaintsField.Editor.Utils
                 {
                     fieldValue = fieldInfo.GetValue(childObject);
                 }
+#pragma warning disable CS0168 // Variable is declared but never used
                 catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
                 {
 #if SAINTSFIELD_DEBUG
                     Debug.LogWarning(e);
@@ -2863,7 +2919,9 @@ namespace SaintsField.Editor.Utils
                 {
                     propertyValue = propertyInfo.GetValue(childObject);
                 }
+#pragma warning disable CS0168 // Variable is declared but never used
                 catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
                 {
 #if SAINTSFIELD_DEBUG
                     Debug.LogWarning(e);
@@ -2898,7 +2956,7 @@ namespace SaintsField.Editor.Utils
 #if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_SEARCH
                     Debug.Log($"#Search# searching token@{tokenIndex}={search.Token} of property={property.name}@{arrayElementIndex} with seachedObjects={string.Join(",", searchedObjects)}");
 #endif
-                    if (!Util.SearchObject(childObject, search.Token, searchedObjects))
+                    if (!SearchObject(childObject, search.Token, searchedObjects))
                     {
                         all = false;
                         break;
@@ -2933,6 +2991,130 @@ namespace SaintsField.Editor.Utils
             }
 
             return true;
+        }
+
+        private static Mesh _coneMesh;
+        private static readonly int HandleColor = Shader.PropertyToID("_HandleColor");
+        private static readonly int HandleSize = Shader.PropertyToID("_HandleSize");
+        private static readonly int ObjectToWorld = Shader.PropertyToID("_ObjectToWorld");
+        private static readonly int HandleZTest = Shader.PropertyToID("_HandleZTest");
+
+        private const float ConeTipVisualScale = 0.2f;
+        // Unity's HandleUtility.DistanceToCone follows the built-in Handles.coneMesh pivot convention.
+        // In our exported mesh version (pivot moved to cone tip), local tip is at z=0 while legacy
+        // built-in cone tip is at +0.7 (for size=1). Keep this value in sync if the cone mesh changes.
+        private const float LegacyConeTipOffset = 0.7f;
+
+        public static float DistanceToConeTipPivot(Vector3 position, Quaternion rotation, float size)
+        {
+            float actualSize = size * ConeTipVisualScale;
+            Vector3 legacyPivotPosition = position - rotation * (Vector3.forward * (LegacyConeTipOffset * actualSize));
+            return HandleUtility.DistanceToCone(legacyPivotPosition, rotation, actualSize);
+        }
+
+        public static void ConeTipHandleCap(
+            int controlID,
+            Vector3 position,
+            Quaternion rotation,
+            float size,
+            EventType eventType)
+        {
+            switch (eventType)
+            {
+                case EventType.MouseMove:
+                case EventType.Layout:
+                    HandleUtility.AddControl(controlID, DistanceToConeTipPivot(position, rotation, size));
+                    break;
+                case EventType.Repaint:
+                {
+                    _coneMesh ??= LoadResource<Mesh>("3D/HandlesConeMesh.asset");
+                    Graphics.DrawMeshNow(_coneMesh, StartCapDraw(position, rotation, size * ConeTipVisualScale));
+                }
+                    break;
+            }
+        }
+
+        public static void ConeTipHandleDraw(
+            Vector3 position,
+            Quaternion rotation,
+            float size)
+        {
+            _coneMesh ??= LoadResource<Mesh>("3D/HandlesConeMesh.asset");
+            Graphics.DrawMeshNow(_coneMesh, StartCapDraw(position, rotation, size * ConeTipVisualScale));
+        }
+
+        internal static Matrix4x4 StartCapDraw(Vector3 position, Quaternion rotation, float size)
+        {
+            Shader.SetGlobalColor(HandleColor, RealHandleColor);
+            Shader.SetGlobalFloat(HandleSize, size);
+            // ReSharper disable once InconsistentNaming
+            Matrix4x4 matrix4x4 = Handles.matrix * Matrix4x4.TRS(position, rotation, Vector3.one);
+            Shader.SetGlobalMatrix(ObjectToWorld, matrix4x4);
+            HandleUtility.handleMaterial.SetFloat(HandleZTest, (float) Handles.zTest);
+            HandleUtility.handleMaterial.SetPass(0);
+            return matrix4x4;
+        }
+
+        internal static Color RealHandleColor => Handles.color * new Color(1f, 1f, 1f, 0.5f) + (Handles.lighting ? new Color(0.0f, 0.0f, 0.0f, 0.5f) : new Color(0.0f, 0.0f, 0.0f, 0.0f));
+
+        public static (Type drawerType, Attribute drawerAttribute) GetDrawerAndAttribute(
+            SerializedProperty property,
+            IReadOnlyList<Attribute> allAttributes,
+            FieldInfo fieldInfo)
+        {
+
+            Type useDrawerType = null;
+            Attribute useAttribute = null;
+            bool isArray = property.propertyType == SerializedPropertyType.Generic
+                           && property.isArray;
+
+            if(!isArray)
+            {
+                ISaintsAttribute saintsAttr = allAttributes
+                    .OfType<ISaintsAttribute>()
+                    .FirstOrDefault();
+
+                useAttribute = saintsAttr as Attribute;
+                if (saintsAttr != null)
+                {
+                    useDrawerType = SaintsPropertyDrawer.GetFirstSaintsDrawerType(saintsAttr.GetType());
+                }
+                else
+                {
+                    if (fieldInfo.FieldType == typeof(Vector4))
+                    {
+                        // let it be null. WTF why Unity you have this issue...
+                    }
+                    else
+                    {
+                        (Attribute attrOrNull, Type drawerType) =
+                            SaintsPropertyDrawer.GetFallbackDrawerType(fieldInfo,
+                                property, allAttributes);
+                        useAttribute = attrOrNull;
+                        useDrawerType = drawerType;
+                    }
+                }
+            }
+
+            return (useDrawerType, useAttribute);
+        }
+
+        public static string GetReferencePropertyLabel(SerializedProperty property)
+        {
+            if (!SerializedUtils.IsOk(property))
+            {
+                return "";
+            }
+
+            object v = property.managedReferenceValue;
+            // ReSharper disable once ConvertIfStatementToReturnStatement
+            if (v == null)
+            {
+                return "-";
+            }
+
+            Type type = v.GetType();
+            return $"{type.Name} <color=#{ColorUtility.ToHtmlStringRGB(Color.gray)}>{type.Namespace}</color>";
         }
     }
 }

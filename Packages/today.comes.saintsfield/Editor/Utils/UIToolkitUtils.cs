@@ -1,11 +1,10 @@
-﻿using System.Collections;
-using SaintsField.Editor.Drawers.EnumFlagsDrawers.FlagsDropdownDrawer;
+#if UNITY_2021_3_OR_NEWER
+using System.Collections;
 using SaintsField.Editor.Drawers.TreeDropdownDrawer;
 using SaintsField.Editor.Playa.Renderer.BaseRenderer;
+using SaintsField.Editor.Playa.Renderer.SaintsCell;
 using SaintsField.Interfaces;
-#if UNITY_2021_3_OR_NEWER
 using SaintsField.Editor.Drawers.SaintsRowDrawer;
-using UnityEditor.UIElements;
 using System.Collections.Generic;
 using SaintsField.Editor.Core;
 using UnityEditor;
@@ -15,14 +14,16 @@ using System.Reflection;
 using SaintsField.Editor.Drawers.AdvancedDropdownDrawer;
 using SaintsField.Editor.Drawers.EnumFlagsDrawers.FlagsTreeDropdownDrawer;
 using SaintsField.Editor.Drawers.ReferencePicker;
+using SaintsField.Editor.Drawers.SaintsWrapTypeDrawer;
 using SaintsField.Editor.Playa;
+using SaintsField.Playa;
+using SaintsField.Utils;
 using UnityEngine;
+using UnityEditor.UIElements;
 using UnityEngine.UIElements;
-#endif
 
 namespace SaintsField.Editor.Utils
 {
-#if UNITY_2021_3_OR_NEWER
     public static class UIToolkitUtils
     {
 
@@ -44,10 +45,17 @@ namespace SaintsField.Editor.Utils
             label.RegisterCallback<GeometryChangedEvent>(evt => FixLabelWidthUIToolkit((Label)evt.target));
         }
 
-        public static void KeepRotate(VisualElement element)
+        // will add uss for you
+        public static void SetKeepRotate(VisualElement element)
         {
             StyleSheet rotateUss = Util.LoadResource<StyleSheet>("UIToolkit/SaintsRotate.uss");
             element.styleSheets.Add(rotateUss);
+            HelpKeepRotate(element);
+        }
+
+        // already set up uss, just init the rotate processor
+        public static void HelpKeepRotate(VisualElement element)
+        {
             element.AddToClassList("saints-rotate");
             element.RegisterCallback<TransitionEndEvent>(_ =>
             {
@@ -71,16 +79,7 @@ namespace SaintsField.Editor.Utils
                         // Debug.Log($"restart to {buttonRotator.style.rotate}");
                     });
                 });
-
-                // Debug.Log(e);
             });
-
-            // element.schedule.Execute(() =>
-            // {
-            //     StyleRotate rotate = element.style.rotate;
-            //     rotate.value = new Rotate(360);
-            //     element.style.rotate = rotate;
-            // });
         }
 
         public static void TriggerRotate(VisualElement element)
@@ -324,12 +323,12 @@ namespace SaintsField.Editor.Utils
 
         private class ButtonColorWrapper
         {
-            private readonly Button button;
+            private readonly Button _button;
             private bool _init;
 
             public ButtonColorWrapper(Button button)
             {
-                this.button = button;
+                _button = button;
             }
 
             private Color _hoverColor;
@@ -344,7 +343,7 @@ namespace SaintsField.Editor.Utils
                 _hoverColor = newColor / 2;
 
                 EnsureBindColorEvent();
-                button.style.backgroundColor = _normalColor;
+                _button.style.backgroundColor = _normalColor;
             }
 
             private void EnsureBindColorEvent()
@@ -355,16 +354,16 @@ namespace SaintsField.Editor.Utils
                 }
 
                 _init = true;
-                button.RegisterCallback<PointerEnterEvent>(_ => button.style.backgroundColor = _hoverColor);
-                button.RegisterCallback<PointerLeaveEvent>(_ => button.style.backgroundColor = _normalColor);
+                _button.RegisterCallback<PointerEnterEvent>(_ => _button.style.backgroundColor = _hoverColor);
+                _button.RegisterCallback<PointerLeaveEvent>(_ => _button.style.backgroundColor = _normalColor);
 
-                button.RegisterCallback<PointerDownEvent>(_ => button.style.backgroundColor = _pressedColor,
+                _button.RegisterCallback<PointerDownEvent>(_ => _button.style.backgroundColor = _pressedColor,
                 TrickleDown.TrickleDown);
-                button.RegisterCallback<PointerUpEvent>(evt =>
+                _button.RegisterCallback<PointerUpEvent>(evt =>
                 {
                     // if pointer still over button, return hover color; otherwise normal color
-                    bool inside = button.worldBound.Contains(evt.position);
-                    button.style.backgroundColor = inside ? _hoverColor : _normalColor;
+                    bool inside = _button.worldBound.Contains(evt.position);
+                    _button.style.backgroundColor = inside ? _hoverColor : _normalColor;
                     // button.style.backgroundColor = _hoverColor;
                 },
                 TrickleDown.TrickleDown);
@@ -411,11 +410,26 @@ namespace SaintsField.Editor.Utils
                 scrollView.style.backgroundColor = lighterColor;
             }
 
-            List<VisualElement> inputFields = visualElement.Query(className: "unity-property-field__input").ToList();
+            List<VisualElement> propertyInputFields = visualElement.Query(className: "unity-property-field__input").ToList();
 
-            foreach (VisualElement inputField in inputFields)
+            foreach (VisualElement propertyInputField in propertyInputFields)
             {
-                inputField.style.backgroundColor = lighterColor;
+                propertyInputField.style.backgroundColor = lighterColor;
+            }
+
+            foreach (VisualElement textInputField in visualElement.Query(classes: "unity-base-text-field__input").ToList())
+            {
+                textInputField.style.backgroundColor = lighterColor;
+            }
+
+            foreach (VisualElement objectInputField in visualElement.Query(classes: "unity-object-field__object").ToList())
+            {
+                objectInputField.style.backgroundColor = lighterColor;
+            }
+
+            foreach (VisualElement objectInputField in visualElement.Query(classes: "unity-object-field__selector").ToList())
+            {
+                objectInputField.style.unityBackgroundImageTintColor = color;
             }
 
             List<VisualElement> checkMarks = visualElement.Query(className: "unity-toggle__checkmark").ToList();
@@ -424,6 +438,16 @@ namespace SaintsField.Editor.Utils
             {
                 checkMark.style.unityBackgroundImageTintColor = color;
                 checkMark.parent.style.backgroundColor = StyleKeyword.Initial;
+            }
+
+            // foreach (VisualElement objectInputField in visualElement.Query(classes: "unity-base-slider__tracker").ToList())
+            // {
+            //     objectInputField.style.backgroundColor = lighterColor;
+            // }
+
+            foreach (VisualElement objectInputField in visualElement.Query(classes: "unity-base-slider__dragger").ToList())
+            {
+                objectInputField.style.backgroundColor = color;
             }
 
             List<Button> buttons = visualElement.Query<Button>().ToList();
@@ -450,115 +474,23 @@ namespace SaintsField.Editor.Utils
 
         public static VisualElement CreateOrUpdateFieldProperty(
             SerializedProperty property,
-            IReadOnlyList<PropertyAttribute> allAttributes,
+            IReadOnlyList<Attribute> allAttributes,
             Type rawType,
             string label,
             FieldInfo fieldInfo,
             bool inHorizontalLayout,
             IMakeRenderer makeRenderer,
             IDOTweenPlayRecorder doTweenPlayRecorder,
+            IRichTextTagProvider richTextTagProvider,
             VisualElement originalField,
             bool mergeDec,
             object parent)
         {
-            // PropertyField result = new PropertyField(FieldWithInfo.SerializedProperty)
-            // {
-            //     style =
-            //     {
-            //         flexGrow = 1,
-            //     },
-            //     name = FieldWithInfo.SerializedProperty.propertyPath,
-            // };
-            // result.Bind(FieldWithInfo.SerializedProperty.serializedObject);
-            // return (result, false);
-
-
-            // About letting SaintsPropertyDrawer fallback:
-            // SaintsPropertyDrawer relays on PropertyField to fallback. Directly hi-jacking the drawer with SaintsPropertyDrawer
-            // the workflow will still get into the PropertyField flow, then SaintsField will fail to decide when the
-            // fallback should stop.
-
-            Type useDrawerType = null;
-            Attribute useAttribute = null;
-            bool isArray = property.propertyType == SerializedPropertyType.Generic
-                           && property.isArray;
-
-            // bool useFallbackSaintsRow = false;
-            // Debug.Log($"rendering {property.propertyPath}/{property.propertyType}/isArray={isArray}/hor={inHorizontalLayout}");
-            if(!isArray)
-            {
-                ISaintsAttribute saintsAttr = allAttributes
-                    .OfType<ISaintsAttribute>()
-                    .FirstOrDefault();
-
-                useAttribute = saintsAttr as Attribute;
-                if (saintsAttr != null)
-                {
-                    useDrawerType = SaintsPropertyDrawer.GetFirstSaintsDrawerType(saintsAttr.GetType());
-                }
-                else
-                {
-                    (Attribute attrOrNull, Type drawerType) =
-                        SaintsPropertyDrawer.GetFallbackDrawerType(fieldInfo,
-                            property, allAttributes);
-                    // Debug.Log($"{FieldWithInfo.SerializedProperty.propertyPath}: {drawerType}");
-                    useAttribute = attrOrNull;
-                    useDrawerType = drawerType;
-
-                    // if (useDrawerType == null &&
-                    //     property.propertyType == SerializedPropertyType.Generic)
-                    // {
-                    //     // useFallbackSaintsRow = true;
-                    //     // useDrawerType = typeof(SaintsRowAttributeDrawer);
-                    // }
-                }
-
-                // Debug.Log($"{property.propertyPath}: drawer={useDrawerType}; label={label}");
-            }
-
-            // List<(ISaintsAttribute Attribute, SaintsPropertyDrawer Drawer)> appendSaintsAttributeDrawer = null;
-            //
-            // if (!isArray && InHorizentalLayout)
-            // {
-            //     appendSaintsAttributeDrawer = new List<(ISaintsAttribute Attribute, SaintsPropertyDrawer Drawer)>();
-            //     NoLabelAttribute noLabelAttribute = new NoLabelAttribute();
-            //     RichLabelAttributeDrawer noLabelDrawer = (RichLabelAttributeDrawer)
-            //         SaintsPropertyDrawer.MakePropertyDrawer(typeof(RichLabelAttributeDrawer),
-            //             FieldWithInfo.FieldInfo, useAttribute, FieldWithInfo.SerializedProperty.displayName);
-            //
-            //     appendSaintsAttributeDrawer.Add((noLabelAttribute, noLabelDrawer));
-            //
-            //     // // ReSharper disable once RedundantArgumentDefaultValue
-            //     // AboveRichLabelAttribute aboveRichLabelAttribute = new AboveRichLabelAttribute("<label />");
-            //     // FullWidthRichLabelAttributeDrawer aboveRichLabelDrawer = (FullWidthRichLabelAttributeDrawer)
-            //     //     SaintsPropertyDrawer.MakePropertyDrawer(typeof(FullWidthRichLabelAttributeDrawer),
-            //     //         FieldWithInfo.FieldInfo, aboveRichLabelAttribute, FieldWithInfo.SerializedProperty.displayName);
-            //     //
-            //     // appendSaintsAttributeDrawer.Add((aboveRichLabelAttribute, aboveRichLabelDrawer));
-            // }
-
-
-
-            // if (!isArray && useDrawerType == null && inHorizontalLayout)
-            // {
-            //     useFallbackSaintsRow = true;
-            //     useDrawerType = typeof(SaintsPropertyDrawer);
-            // }
-
-            // Debug.Log($"rendering {property.propertyPath}/useAttribute={useAttribute}/useDrawerType={useDrawerType}");
-
-            // fallback to SaintsRow cuz: not custom drawer (attr drawer or type drawer), is generic, and is not array
-            // if (useDrawerType != null && property.propertyType == SerializedPropertyType.Generic
-            //                           && !property.isArray)
-            // {
-            //     SaintsRowAttributeDrawer saintsRowDrawer = (SaintsRowAttributeDrawer)SaintsPropertyDrawer.MakePropertyDrawer(typeof(SaintsRowAttributeDrawer), fieldInfo, useAttribute, label);
-            //     saintsRowDrawer.InHorizontalLayout = inHorizontalLayout;
-            //     return saintsRowDrawer.CreatePropertyGUI(property);
-            // }
+            (Type useDrawerType, Attribute useAttribute) = Util.GetDrawerAndAttribute(property, allAttributes, fieldInfo);
 
             if (useDrawerType == null)
             {
-                // Debug.Log($"fallback {property.propertyPath}/hor={inHorizontalLayout};prop={string.Join(",", allAttributes)}; label={label}");
+                // Debug.Log($"fallback CreateOrUpdateFieldRawFallback {property.propertyPath}/hor={inHorizontalLayout};prop={string.Join(",", allAttributes)}; label={label}; allAttributes={string.Join(", ", allAttributes)}");
                 VisualElement r = CreateOrUpdateFieldRawFallback(
                     property,
                     allAttributes,
@@ -568,6 +500,7 @@ namespace SaintsField.Editor.Utils
                     inHorizontalLayout,
                     makeRenderer,
                     doTweenPlayRecorder,
+                    richTextTagProvider,
                     originalField,
                     parent
                 );
@@ -576,7 +509,7 @@ namespace SaintsField.Editor.Utils
                     return null;
                 }
 
-                return mergeDec? UIToolkitCache.MergeWithDec(r, allAttributes): r;
+                return mergeDec? UIToolkitCache.MergeWithDec(r, allAttributes.OfType<PropertyAttribute>().ToArray()): r;
             }
 
             // Nah... This didn't handle for mis-ordered case
@@ -617,14 +550,22 @@ namespace SaintsField.Editor.Utils
                 VisualElement r = propertyDrawer.CreatePropertyGUI(property);
                 if (r != null)
                 {
+                    if (inHorizontalLayout && IsBaseFieldOfAnyType(r))
+                    {
+                        r.style.flexDirection = FlexDirection.Column;
+                        r.style.alignItems = Align.FlexStart;
+                        r.RemoveFromClassList("unity-base-field__aligned");
+                        r.RemoveFromClassList(BaseField<UnityEngine.Object>.alignedFieldUssClassName);
+                    }
                     r.Bind(property.serializedObject);
                     // PropertyDrawerElementDirtyFix(property, propertyDrawer, r);
-                    return mergeDec? UIToolkitCache.MergeWithDec(r, allAttributes): r;
+                    return mergeDec? UIToolkitCache.MergeWithDec(r, allAttributes.OfType<PropertyAttribute>().ToArray()): r;
                 }
             }
 
             // SaintsPropertyDrawer won't have pure IMGUI one. Let Unity handle it.
             // We don't need to handle decorators either
+            // Debug.Log($"PropertyField for {property.propertyPath}");
             PropertyField result = new PropertyField(property, string.IsNullOrEmpty(label) ? "": label)
             {
                 style =
@@ -674,6 +615,19 @@ namespace SaintsField.Editor.Utils
             // imGuiContainer.AddToClassList(IMGUILabelHelper.ClassName);
             //
             // return (imGuiContainer, false);
+        }
+
+        public static bool IsBaseFieldOfAnyType(VisualElement element)
+        {
+            for (Type t = element.GetType(); t != null; t = t.BaseType)
+            {
+                if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(BaseField<>))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // This is now fixed using Bind(serializedObject)
@@ -735,17 +689,21 @@ namespace SaintsField.Editor.Utils
         // Note: do NOT pass SerializedPropertyType.Generic type: process it externally.
         public static VisualElement CreateOrUpdateFieldRawFallback(
           SerializedProperty property,
-          IReadOnlyList<PropertyAttribute> allAttributes,
+          IReadOnlyList<Attribute> allAttributes,
           Type rawType,
           string label,
           FieldInfo fieldInfo,
           bool inHorizontalLayout,
           IMakeRenderer makeRenderer,
           IDOTweenPlayRecorder doTweenPlayRecorder,
+          IRichTextTagProvider richTextTagProvider,
           VisualElement originalField,
           object parent)
         {
             SerializedPropertyType propertyType = property.propertyType;
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_DOWNPOUR
+            Debug.Log($"CreateOrUpdateFieldRawFallback {property.propertyPath} allAttributes={string.Join(", ", allAttributes)} propertyType={propertyType} property.isArray={property.isArray}");
+#endif
             int propIndex = SerializedUtils.PropertyPathIndex(property.propertyPath);
             bool canAddContextReset = propIndex == -1;
             // Debug.Log($"CreateOrUpdateFieldRawFallback process {property.propertyPath}/{property.propertyType}/{property.isArray}/hor={inHorizontalLayout}");
@@ -754,13 +712,43 @@ namespace SaintsField.Editor.Utils
                 case SerializedPropertyType.Generic:
                 case SerializedPropertyType.ManagedReference:
                 {
-                    // Debug.Log($"generic/managed process {property.propertyPath}/{property.isArray}");
+                    // Debug.Log($"generic/managed process {property.propertyPath}/{property.isArray} allAttributes={string.Join(", ", allAttributes)}");
                     if (property.isArray)
                     {
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_DOWNPOUR
+                        Debug.Log($"array process {property.propertyPath} allAttributes={string.Join(", ", allAttributes)}");
+#endif
                         ListView listView = originalField as ListView;
                         bool listViewNotExist = listView == null;
                         if (listViewNotExist)
                         {
+                            // List<Attribute> injectedAllAttributes = new List<Attribute>();
+                            List<IPlayaAttribute> injectedIPlayaAttributes = new List<IPlayaAttribute>();
+                            // List<InjectAttributeBase> nestedInjectAttributes = new List<InjectAttributeBase>();
+                            foreach (Attribute attr in allAttributes)
+                            {
+                                // ReSharper disable once MergeIntoPattern
+                                if(attr is InjectAttributeBase injectAttributeBase && injectAttributeBase.Depth <= 1)
+                                {
+                                    Attribute injectedAttribute = SaintsWrapUtils.CreateInjectedAttribute(injectAttributeBase);
+                                    // injectedAllAttributes.Add(injectedAttribute);
+                                    if(injectedAttribute is IPlayaAttribute ip)
+                                    {
+                                        injectedIPlayaAttributes.Add(ip);
+                                        // injectedAllAttributes.Add(injectedAttribute);
+                                    }
+                                }
+                                // else
+                                // {
+                                //     // injectedAllAttributes.Add(attr);
+                                //     if(attr is IPlayaAttribute ip)
+                                //     {
+                                //         injectedIPlayaAttributes.Add(ip);
+                                //     }
+                                //     // injectedAllAttributes.Add(attr);
+                                // }
+                            }
+
                             // Debug.Log($"listView {property.propertyPath}");
                             listView = new ListView
                             {
@@ -788,21 +776,52 @@ namespace SaintsField.Editor.Utils
                                         return;
                                     }
                                     element.Clear();
-
-                                    // Debug.Log($"draw item {itemProp.propertyPath}/rawType={rawType}/itemType={ReflectUtils.GetElementType(rawType)}");
-
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_DOWNPOUR
+                                    Debug.Log($"draw item {itemProp.propertyPath}/rawType={rawType}/itemType={ReflectUtils.GetElementType(rawType)}; allAttributes={string.Join(",", allAttributes)}");
+#endif
                                     string defaultName = itemProp.displayName;
 
                                     VisualElement result = CreateOrUpdateFieldProperty(
                                         itemProp,
-                                        allAttributes,
+                                        allAttributes.Where(each => (each is InjectAttributeBase) || each is not IPlayaAttribute).ToArray(),
                                         ReflectUtils.GetElementType(rawType),
                                         itemProp.displayName,
-                                        fieldInfo, inHorizontalLayout, makeRenderer, doTweenPlayRecorder, null, false, parent);
+                                        fieldInfo, inHorizontalLayout, makeRenderer, doTweenPlayRecorder, richTextTagProvider, null, false, parent);
                                     // Debug.Log($"done rendering {index}/{itemProp.propertyPath}/{result == null}/{property.arraySize}");
                                     if (result != null)
                                     {
-                                        element.Add(result);
+                                        // injectedIPlayaAttributes = allAttributes.OfType<IPlayaAttribute>().ToList();
+#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_DOWNPOUR
+                                        Debug.Log($"list item process {itemProp.propertyPath} injectedIPlayaAttributes={string.Join(", ", injectedIPlayaAttributes)}");
+#endif
+                                        if (injectedIPlayaAttributes.Count > 0)
+                                        {
+                                            SaintsCellRenderer cellRenderer = new SaintsCellRenderer(
+                                                itemProp.serializedObject,
+                                                new SaintsFieldWithInfo
+                                                {
+                                                    ClassStructType = null,
+                                                    PlayaAttributes = injectedIPlayaAttributes,
+                                                    // PlayaAttributes = Array.Empty<IPlayaAttribute>(),
+                                                    TargetParent = null,
+                                                    TargetMemberInfo = null,
+                                                    TargetMemberIndex = 0,
+                                                    Targets = new[]{parent},
+
+                                                    RenderType = SaintsRenderType.SerializedField,
+                                                    SerializedProperty = itemProp,
+                                                    MemberId = itemProp.propertyPath,
+                                                    FieldInfo = fieldInfo,
+                                                    InherentDepth = 0,
+                                                }
+                                            );
+                                            element.Add(cellRenderer.GetElementAndInit(result));
+                                        }
+                                        else
+                                        {
+                                            element.Add(result);
+                                        }
+
                                         if(itemProp.propertyType == SerializedPropertyType.Generic || itemProp.propertyType == SerializedPropertyType.ManagedReference)
                                         {
                                             result.schedule.Execute(() =>
@@ -812,8 +831,7 @@ namespace SaintsField.Editor.Utils
                                                 {
                                                     defaultName = itemProp.displayName;
                                                     ChangeLabel(result,
-                                                        RichTextDrawer.ParseRichXml(defaultName, label, property,
-                                                            fieldInfo, parent), new RichTextDrawer(), 0);
+                                                        RichTextDrawer.ParseRichXmlWithProvider(defaultName, richTextTagProvider), new RichTextDrawer(), 0);
                                                 }
                                             }).Every(150);
                                         }
@@ -881,6 +899,8 @@ namespace SaintsField.Editor.Utils
                                     pooled.target = listView;
                                     listView.SendEvent(pooled);
                                 }
+
+                                SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke();
                             }).Every(100);
 
                             AddContextualMenuReset(listViewToggle, property, fieldInfo, parent);
@@ -921,6 +941,7 @@ namespace SaintsField.Editor.Utils
                         listView.BindProperty(property);
                         listView.RegisterCallback<DetachFromPanelEvent>(_ => Unbind(listView));
 
+                        // Debug.Log($"array created {property.propertyPath} allAttributes={string.Join(", ", allAttributes)}");
                         return listViewNotExist ? listView : null;
 
                     }
@@ -934,7 +955,7 @@ namespace SaintsField.Editor.Utils
                     {
                         ReferencePickerAttribute referencePickerAttribute = new ReferencePickerAttribute();
                         ReferencePickerAttributeDrawer referencePickerAttributeDrawer = (ReferencePickerAttributeDrawer) SaintsPropertyDrawer.MakePropertyDrawer(typeof(ReferencePickerAttributeDrawer), fieldInfo, referencePickerAttribute, label);
-                        referencePickerAttributeDrawer.OverridePropertyAttributes = new PropertyAttribute[]
+                        referencePickerAttributeDrawer.OverrideAttributes = new PropertyAttribute[]
                         {
                             referencePickerAttribute,
                             new SaintsRowAttribute(),
@@ -970,6 +991,7 @@ namespace SaintsField.Editor.Utils
                             },
                         };
                         longField.BindProperty(property);
+                        longField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                         ApplyBasicStyles(longField, inHorizontalLayout);
                         AddContextualMenuReset(longField, property, fieldInfo, parent);
                         return longField;
@@ -996,6 +1018,7 @@ namespace SaintsField.Editor.Utils
                             },
                         };
                         unsignedLongField.BindProperty(property);
+                        unsignedLongField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                         ApplyBasicStyles(unsignedLongField, inHorizontalLayout);
                         AddContextualMenuReset(unsignedLongField, property, fieldInfo, parent);
                         return unsignedLongField;
@@ -1042,6 +1065,7 @@ namespace SaintsField.Editor.Utils
                             },
                         };
                         integerField.BindProperty(property);
+                        integerField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                         ApplyBasicStyles(integerField, inHorizontalLayout);
                         AddContextualMenuReset(integerField, property, fieldInfo, parent);
 
@@ -1069,6 +1093,7 @@ namespace SaintsField.Editor.Utils
                             },
                         };
                         unsignedIntegerField.BindProperty(property);
+                        unsignedIntegerField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                         ApplyBasicStyles(unsignedIntegerField, inHorizontalLayout);
                         AddContextualMenuReset(unsignedIntegerField, property, fieldInfo, parent);
 
@@ -1116,6 +1141,7 @@ namespace SaintsField.Editor.Utils
                             },
                         };
                         element.BindProperty(property);
+                        element.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                         ApplyBasicStyles(element, inHorizontalLayout);
                         AddContextualMenuReset(element, property, fieldInfo, parent);
 
@@ -1142,6 +1168,7 @@ namespace SaintsField.Editor.Utils
                             },
                         };
                         element.BindProperty(property);
+                        element.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                         ApplyBasicStyles(element, inHorizontalLayout);
                         AddContextualMenuReset(element, property, fieldInfo, parent);
 
@@ -1168,6 +1195,7 @@ namespace SaintsField.Editor.Utils
                             },
                         };
                         element.BindProperty(property);
+                        element.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                         ApplyBasicStyles(element, inHorizontalLayout);
                         AddContextualMenuReset(element, property, fieldInfo, parent);
 
@@ -1194,6 +1222,7 @@ namespace SaintsField.Editor.Utils
                             },
                         };
                         element.BindProperty(property);
+                        element.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                         ApplyBasicStyles(element, inHorizontalLayout);
                         AddContextualMenuReset(element, property, fieldInfo, parent);
                         return element;
@@ -1220,6 +1249,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     toggle.BindProperty(property);
+                    toggle.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     toggle.AddToClassList(Toggle.alignedFieldUssClassName);
                     toggle.AddToClassList(SaintsPropertyDrawer.ClassAllowDisable);
                     toggle.AddToClassList(SaintsPropertyDrawer.ClassLabelFieldUIToolkit);
@@ -1273,6 +1303,7 @@ namespace SaintsField.Editor.Utils
                             },
                         };
                         doubleField.BindProperty(property);
+                        doubleField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
 
                         ApplyBasicStyles(doubleField, inHorizontalLayout);
                         return doubleField;
@@ -1310,6 +1341,8 @@ namespace SaintsField.Editor.Utils
                       return null;
                     }
 
+                    // Debug.Log($"rendering string field {property.propertyPath}");
+
                     textField = new TextField(label)
                     {
                         value = property.stringValue,
@@ -1320,6 +1353,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     textField.BindProperty(property);
+                    textField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     ApplyBasicStyles(textField, inHorizontalLayout);
                     if(canAddContextReset)
                     {
@@ -1346,6 +1380,7 @@ namespace SaintsField.Editor.Utils
                     };
 
                     colorField.BindProperty(property);
+                    colorField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     ApplyBasicStyles(colorField, inHorizontalLayout);
                     if(canAddContextReset)
                     {
@@ -1379,6 +1414,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     objectField.BindProperty(property);
+                    objectField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     ApplyBasicStyles(objectField, inHorizontalLayout);
 
                     if (string.IsNullOrEmpty(label))  // ObjectField.label has issue in SaintsDictionary. This is a workaround
@@ -1412,6 +1448,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     layerMaskField.BindProperty(property);
+                    layerMaskField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     ApplyBasicStyles(layerMaskField, inHorizontalLayout);
                     if(canAddContextReset)
                     {
@@ -1435,7 +1472,7 @@ namespace SaintsField.Editor.Utils
 
                         FlagsTreeDropdownAttribute flagsDropdownAttribute = new FlagsTreeDropdownAttribute();
                         FlagsTreeDropdownAttributeDrawer flagsDropdownDrawer = (FlagsTreeDropdownAttributeDrawer) SaintsPropertyDrawer.MakePropertyDrawer(typeof(FlagsTreeDropdownAttributeDrawer), fieldInfo, flagsDropdownAttribute, label);
-                        flagsDropdownDrawer.OverridePropertyAttributes = new[] { flagsDropdownAttribute };
+                        flagsDropdownDrawer.OverrideAttributes = new[] { flagsDropdownAttribute };
                         flagsDropdownDrawer.InHorizontalLayout = inHorizontalLayout;
                         return flagsDropdownDrawer.CreatePropertyGUI(property);
                     }
@@ -1447,7 +1484,7 @@ namespace SaintsField.Editor.Utils
 
                     DropdownAttribute treeDropdownAttribute = new DropdownAttribute();
                     TreeDropdownAttributeDrawer treeDropdownDrawer = (TreeDropdownAttributeDrawer) SaintsPropertyDrawer.MakePropertyDrawer(typeof(TreeDropdownAttributeDrawer), fieldInfo, treeDropdownAttribute, label);
-                    treeDropdownDrawer.OverridePropertyAttributes = new[] { treeDropdownAttribute };
+                    treeDropdownDrawer.OverrideAttributes = new[] { treeDropdownAttribute };
                     treeDropdownDrawer.InHorizontalLayout = inHorizontalLayout;
                     return treeDropdownDrawer.CreatePropertyGUI(property);
                 }
@@ -1469,6 +1506,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     vector2Field.BindProperty(property);
+                    vector2Field.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     vector2Field.AddToClassList(SaintsPropertyDrawer.ClassAllowDisable);
                     vector2Field.AddToClassList(SaintsPropertyDrawer.ClassLabelFieldUIToolkit);
                     if (inHorizontalLayout)
@@ -1511,6 +1549,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     vector3Field.BindProperty(property);
+                    vector3Field.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     vector3Field.AddToClassList(SaintsPropertyDrawer.ClassAllowDisable);
                     vector3Field.AddToClassList(SaintsPropertyDrawer.ClassLabelFieldUIToolkit);
 
@@ -1555,6 +1594,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     vector4Field.BindProperty(property);
+                    vector4Field.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     vector4Field.AddToClassList(SaintsPropertyDrawer.ClassAllowDisable);
                     vector4Field.AddToClassList(SaintsPropertyDrawer.ClassLabelFieldUIToolkit);
 
@@ -1598,6 +1638,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     rectField.BindProperty(property);
+                    rectField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     rectField.AddToClassList(SaintsPropertyDrawer.ClassAllowDisable);
                     rectField.AddToClassList(SaintsPropertyDrawer.ClassLabelFieldUIToolkit);
 
@@ -1642,6 +1683,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     integerField.BindProperty(property);
+                    integerField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     ApplyBasicStyles(integerField, inHorizontalLayout);
                     if(canAddContextReset)
                     {
@@ -1668,6 +1710,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     textField.BindProperty(property);
+                    textField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     ApplyBasicStyles(textField, inHorizontalLayout);
                     if(canAddContextReset)
                     {
@@ -1693,6 +1736,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     curveField.BindProperty(property);
+                    curveField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     ApplyBasicStyles(curveField, inHorizontalLayout);
                     if(canAddContextReset)
                     {
@@ -1719,6 +1763,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     boundsField.BindProperty(property);
+                    boundsField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     boundsField.AddToClassList(SaintsPropertyDrawer.ClassAllowDisable);
                     boundsField.AddToClassList(SaintsPropertyDrawer.ClassLabelFieldUIToolkit);
                     if (inHorizontalLayout)
@@ -1775,6 +1820,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     gradientField.BindProperty(property);
+                    gradientField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     ApplyBasicStyles(gradientField, inHorizontalLayout);
                     if(canAddContextReset)
                     {
@@ -1803,6 +1849,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     integerField.BindProperty(property);
+                    integerField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     ApplyBasicStyles(integerField, inHorizontalLayout);
                     if(canAddContextReset)
                     {
@@ -1828,6 +1875,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     vector2IntField.BindProperty(property);
+                    vector2IntField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     vector2IntField.AddToClassList(SaintsPropertyDrawer.ClassAllowDisable);
                     vector2IntField.AddToClassList(SaintsPropertyDrawer.ClassLabelFieldUIToolkit);
 
@@ -1868,6 +1916,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     vector3IntField.BindProperty(property);
+                    vector3IntField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     vector3IntField.AddToClassList(SaintsPropertyDrawer.ClassAllowDisable);
                     vector3IntField.AddToClassList(SaintsPropertyDrawer.ClassLabelFieldUIToolkit);
 
@@ -1908,6 +1957,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     rectIntField.BindProperty(property);
+                    rectIntField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     rectIntField.AddToClassList(SaintsPropertyDrawer.ClassAllowDisable);
                     rectIntField.AddToClassList(SaintsPropertyDrawer.ClassLabelFieldUIToolkit);
 
@@ -1948,6 +1998,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     boundsIntField.BindProperty(property);
+                    boundsIntField.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     boundsIntField.AddToClassList(SaintsPropertyDrawer.ClassAllowDisable);
                     boundsIntField.AddToClassList(SaintsPropertyDrawer.ClassLabelFieldUIToolkit);
 
@@ -1988,6 +2039,7 @@ namespace SaintsField.Editor.Utils
                         },
                     };
                     hash128Field.BindProperty(property);
+                    hash128Field.RegisterValueChangedCallback(_ => SaintsEditorApplicationChanged.OnSaintsFieldChangedEvent.Invoke());
                     ApplyBasicStyles(hash128Field, inHorizontalLayout);
                     AddContextualMenuReset(hash128Field, property, fieldInfo, parent);
                     return hash128Field;
@@ -2023,7 +2075,6 @@ namespace SaintsField.Editor.Utils
         // ReSharper disable once UnusedParameter.Global
         public static void Unbind(VisualElement element)
         {
-#if UNITY_2021_3_OR_NEWER
             try
             {
                 element.Unbind();
@@ -2036,86 +2087,6 @@ namespace SaintsField.Editor.Utils
             {
                 // ignore
             }
-#else
-            // not working atm
-            if (_fallbackUnbindReflectionFailed)
-            {
-#if SAINTSFIELD_DEBUG
-                Debug.Log("Unbind skip: already failed");
-#endif
-                return;
-            }
-
-            // get internal binder type
-            _serializedObjectBindingContextType ??= Type.GetType("UnityEditor.UIElements.Bindings.SerializedObjectBindingContext, UnityEditor.UIElementsModule", throwOnError: false);
-
-            if (_serializedObjectBindingContextType == null)
-            {
-#if SAINTSFIELD_DEBUG
-                Debug.LogWarning("Unbind skip: failed to find SerializedObjectBindingContext type");
-#endif
-                _fallbackUnbindReflectionFailed = true;
-                return;
-            }
-
-            // get the find method
-            _serializedObjectBindingContextFindMethod ??= _serializedObjectBindingContextType.GetMethod("FindBindingContext", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
-
-            if (_serializedObjectBindingContextFindMethod == null)
-            {
-#if SAINTSFIELD_DEBUG
-                Debug.LogWarning("Unbind skip: failed to find FindBindingContext method in SerializedObjectBindingContext");
-#endif
-                _fallbackUnbindReflectionFailed = true;
-                return;
-            }
-
-            // get curveField context (if possible)
-            object elementContext = _serializedObjectBindingContextFindMethod.Invoke(null, new object[] { element, serializedObject });
-
-            if (elementContext == null)
-            {
-#if SAINTSFIELD_DEBUG
-                Debug.LogWarning($"Unbind skip: failed to find binding context for element {element}");
-#endif
-                return;
-            }
-
-            // get the binding updater (.Add method will always return it)
-            MethodInfo bindingUpdaterAddMethod = elementContext.GetType().GetMethod("AddBindingUpdater", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
-
-            if (bindingUpdaterAddMethod == null)
-            {
-#if SAINTSFIELD_DEBUG
-                Debug.LogWarning($"Unbind skip: failed to find AddBindingUpdater method in {elementContext.GetType()}");
-#endif
-                return;
-            }
-
-            object bindingUpdater = bindingUpdaterAddMethod.Invoke(elementContext, new object[] { element });
-
-            if (bindingUpdater == null)
-            {
-#if SAINTSFIELD_DEBUG
-                Debug.LogWarning($"Unbind skip: failed to get binding updater for element {element}");
-#endif
-                return;
-            }
-            // and call .Unbind() for a blanket removal
-            MethodInfo unbindMethod = bindingUpdater.GetType().GetMethod("Unbind", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
-
-            if (unbindMethod == null)
-            {
-#if SAINTSFIELD_DEBUG
-                Debug.LogWarning($"Unbind skip: failed to find Unbind method in {bindingUpdater.GetType()}");
-#endif
-                _fallbackUnbindReflectionFailed = true;
-                return;
-            }
-
-            unbindMethod.Invoke(bindingUpdater, Array.Empty<object>());
-            // Debug.Log("unbindMethod!");
-#endif
         }
 
         #region ContextMenu
@@ -2408,8 +2379,11 @@ namespace SaintsField.Editor.Utils
                         PopulateContextMenuUsingFillPropertyContextMenu(evt, ele, property);
                         return;
                     }
+#pragma warning disable CS0168 // Variable is declared but never used
                     catch (Exception ex)
+#pragma warning restore CS0168 // Variable is declared but never used
                     {
+                        // ignored
 #if SAINTSFIELD_DEBUG
                         Debug.LogException(ex);
 #endif
@@ -2446,6 +2420,21 @@ namespace SaintsField.Editor.Utils
             }));
         }
 
+        private readonly struct TemporaryGameObject : IDisposable
+        {
+            private readonly GameObject _gameObject;
+
+            public TemporaryGameObject(GameObject go)
+            {
+                _gameObject = go;
+            }
+
+            public void Dispose()
+            {
+                UnityEngine.Object.DestroyImmediate(_gameObject);
+            }
+        }
+
         public static void AddContextualMenuReset(VisualElement element, SerializedProperty property, FieldInfo fieldInfo, object parent)
         {
             int propIndex = SerializedUtils.PropertyPathIndex(property.propertyPath);
@@ -2460,34 +2449,40 @@ namespace SaintsField.Editor.Utils
                 return;
             }
 
-            string label = $"Reset {fieldInfo.Name}";
+            string noEscapeName = SerializedUtils.TrimKBackingField(fieldInfo.Name);
+#if UNITY_EDITOR_WIN
+            noEscapeName = noEscapeName.TrimStart('_');
+#endif
+            string label = $"Reset {noEscapeName}";
 
             if (type.IsSubclassOf(typeof(Component)))
             {
                 element.AddManipulator(new ContextualMenuManipulator(evt =>
                 {
-                    evt.menu.AppendSeparator();
+                    // evt.menu.AppendSeparator();
                     evt.menu.AppendAction(label, _ =>
                     {
                         GameObject go = new GameObject();
-                        Component result = go.AddComponent(type);
-                        if (SerializedUtils.IsOk(property))
+                        using(new TemporaryGameObject(go))
                         {
-                            Undo.RecordObject(property.serializedObject.targetObject, $"SaintsField Reset {fieldInfo.Name}");
-                        }
+                            Component result = go.AddComponent(type);
+                            if (SerializedUtils.IsOk(property))
+                            {
+                                Undo.RecordObject(property.serializedObject.targetObject,
+                                    $"SaintsField Reset {fieldInfo.Name}");
+                            }
 
-                        try
-                        {
-                            object defaultValue = fieldInfo.GetValue(result);
+                            try
+                            {
+                                object defaultValue = fieldInfo.GetValue(result);
 
-                            fieldInfo.SetValue(parent, defaultValue);
+                                fieldInfo.SetValue(parent, defaultValue);
+                            }
+                            catch (Exception e)
+                            {
+                                Debug.LogError(e);
+                            }
                         }
-                        catch (Exception e)
-                        {
-                            Debug.LogError(e);
-                        }
-
-                        // UnityEngine.Object.DestroyImmediate(go);
                     });
 
                 }));
@@ -2499,7 +2494,7 @@ namespace SaintsField.Editor.Utils
             {
                 element.AddManipulator(new ContextualMenuManipulator(evt =>
                 {
-                    evt.menu.AppendSeparator();
+                    // evt.menu.AppendSeparator();
                     evt.menu.AppendAction(label, _ =>
                     {
                         ScriptableObject result = ScriptableObject.CreateInstance(type);
@@ -2528,7 +2523,7 @@ namespace SaintsField.Editor.Utils
 
             element.AddManipulator(new ContextualMenuManipulator(evt =>
             {
-                evt.menu.AppendSeparator();
+                // evt.menu.AppendSeparator();
                 evt.menu.AppendAction(label, _ =>
                 {
                     if (SerializedUtils.IsOk(property))
@@ -2637,8 +2632,11 @@ namespace SaintsField.Editor.Utils
 
                         menu = fillPropertyContextMenu.Invoke(property, root);
                     }
+#pragma warning disable CS0168 // Variable is declared but never used
                     catch (Exception e)
+#pragma warning restore CS0168 // Variable is declared but never used
                     {
+                        // ignored
 #if SAINTSFIELD_DEBUG
                         Debug.LogError(e);
 #endif
@@ -2660,7 +2658,9 @@ namespace SaintsField.Editor.Utils
                     // Convert legacy menu to new UI Toolkit dropdown menu
                     converted = GenericMenuDynamicConverter.ConvertGenericMenuToDropdownMenu(menu, evt.menu);
                 }
+#pragma warning disable CS0168 // Variable is declared but never used
                 catch (Exception ex)
+#pragma warning restore CS0168 // Variable is declared but never used
                 {
 #if SAINTSFIELD_DEBUG
                     Debug.LogException(ex);
@@ -2709,7 +2709,7 @@ namespace SaintsField.Editor.Utils
         {
             DropdownButtonField dropdownBtn = MakeDropdownButtonUIToolkit(label);
 
-            dropdownBtn.ButtonLabelElement.text = GetReferencePropertyLabel(property);
+            dropdownBtn.ButtonLabelElement.text = Util.GetReferencePropertyLabel(property);
 
             dropdownBtn.ButtonElement.clicked += () =>
             {
@@ -2717,7 +2717,7 @@ namespace SaintsField.Editor.Utils
                 // dropBound.height = SaintsPropertyDrawer.SingleLineHeight;
 
                 object managedReferenceValue = property.managedReferenceValue;
-                AdvancedDropdownList<Type> dropdownList = new AdvancedDropdownList<Type>
+                Dropdown<Type> dropdownList = new Dropdown<Type>
                 {
                     {"[Null]", null},
                 };
@@ -2735,7 +2735,7 @@ namespace SaintsField.Editor.Utils
                     }
                     list.Add(type);
                     // string displayName = FormatTypeName(type);
-                    // dropdownList.Add(new AdvancedDropdownList<Type>(displayName, type));
+                    // dropdownList.Add(new Dropdown<Type>(displayName, type));
                 }
 
                 IOrderedEnumerable<string> nameSpaceToTypesSorted = nameSpaceToTypes.Keys.OrderBy(each => each);
@@ -2743,7 +2743,7 @@ namespace SaintsField.Editor.Utils
                 {
                     List<Type> types = nameSpaceToTypes[@namespace];
                     // types.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
-                    AdvancedDropdownList<Type> namespaceTypes = new AdvancedDropdownList<Type>(@namespace == ""? "[No Namespace]": @namespace);
+                    Dropdown<Type> namespaceTypes = new Dropdown<Type>(@namespace == ""? "[No Namespace]": @namespace);
                     foreach (Type eachType in types)
                     {
                         namespaceTypes.Add(eachType.Name, eachType);
@@ -2781,39 +2781,17 @@ namespace SaintsField.Editor.Utils
                 ));
             };
 
-            dropdownBtn.TrackPropertyValue(property, _ => dropdownBtn.ButtonLabelElement.text = GetReferencePropertyLabel(property));
+            dropdownBtn.TrackPropertyValue(property, _ => dropdownBtn.ButtonLabelElement.text = Util.GetReferencePropertyLabel(property));
 
             return dropdownBtn;
         }
 
-        public static string GetReferencePropertyLabel(SerializedProperty property)
-        {
-            if (!SerializedUtils.IsOk(property))
-            {
-                return "";
-            }
-
-            object v = property.managedReferenceValue;
-            // ReSharper disable once ConvertIfStatementToReturnStatement
-            if (v == null)
-            {
-                return "-";
-            }
-
-            Type type = v.GetType();
-            return $"{type.Name} <color=#{ColorUtility.ToHtmlStringRGB(Color.gray)}>{type.Namespace}</color>";
-        }
-
         public static void UIToolkitValueEditAfterProcess<T>(
             BaseField<T> element,
-            Action<object> setterOrNull,
+            bool hasSetter,
             bool labelGrayColor,
             bool inHorizontalLayout)
         {
-            if (labelGrayColor)
-            {
-                element.labelElement.style.color = AbsRenderer.ReColor;
-            }
             if (inHorizontalLayout)
             {
                 element.style.flexDirection = FlexDirection.Column;
@@ -2822,14 +2800,29 @@ namespace SaintsField.Editor.Utils
             {
                 element.AddToClassList(BaseField<T>.alignedFieldUssClassName);
             }
-            if (setterOrNull == null)
+
+            UIToolkitValueEditAfterProcessBase(element, element.labelElement, hasSetter, labelGrayColor);
+        }
+
+        public static void UIToolkitValueEditAfterProcessBase(
+            VisualElement element,
+            VisualElement labelElement,
+            bool hasSetter,
+            bool labelGrayColor)
+        {
+            if (labelGrayColor)
             {
-                element.SetEnabled(false);
-                element.AddToClassList(AbsRenderer.ClassSaintsFieldEditingDisabled);
+                labelElement.style.color = AbsRenderer.ReColor;
+            }
+
+            if (hasSetter)
+            {
+                element.AddToClassList(SaintsPropertyDrawer.ClassAllowDisable);
             }
             else
             {
-                element.AddToClassList(SaintsPropertyDrawer.ClassAllowDisable);
+                element.SetEnabled(false);
+                element.AddToClassList(AbsRenderer.ClassSaintsFieldEditingDisabled);
             }
         }
 
@@ -2961,5 +2954,5 @@ namespace SaintsField.Editor.Utils
             }
         }
     }
-#endif
 }
+#endif

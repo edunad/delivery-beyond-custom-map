@@ -1,8 +1,7 @@
-#if UNITY_2021_3_OR_NEWER // && !SAINTSFIELD_UI_TOOLKIT_DISABLE
+#if UNITY_2021_3_OR_NEWER
 using System.Collections.Generic;
 using SaintsField.Editor.Core;
 using SaintsField.Editor.Drawers.SeparatorDrawer;
-using SaintsField.Utils;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -13,6 +12,10 @@ namespace SaintsField.Editor.Playa.Renderer.PlayaSeparatorSemiRenderer
         private VisualElement _titleElement;
         private string _richXml;
         private readonly RichTextDrawer _richTextDrawer = new RichTextDrawer();
+
+        public override void OnDestroyUIToolkit()
+        {
+        }
 
         protected override (VisualElement target, bool needUpdate) CreateTargetUIToolkit(VisualElement inspectorRoot,
             VisualElement container)
@@ -33,37 +36,13 @@ namespace SaintsField.Editor.Playa.Renderer.PlayaSeparatorSemiRenderer
                 return result;
             }
 
-            string newRichXml = _playaSeparatorAttribute.Title;
-            if (_playaSeparatorAttribute.IsCallback)
+            (string error, string newRichXml) = GetSeparatorRichXml();
+            if (error != "")
             {
-                (string error, object rawResult) = GetCallback(FieldWithInfo, _playaSeparatorAttribute.Title);
-                if (error != "")
-                {
 #if SAINTSFIELD_DEBUG
-                    Debug.LogError(error);
+                Debug.LogError(error);
 #endif
-                    return result;
-                }
-
-                if (rawResult is string rawString)
-                {
-                    newRichXml = $"<color=#{_colorHex}>{rawString}</color>";
-                }
-                else if (RuntimeUtil.IsNull(rawResult))
-                {
-                    newRichXml = null;
-                }
-#if SAINTSFIELD_DEBUG
-                else
-                {
-                    Debug.LogError($"{rawResult} is not a string");
-                    return result;
-                }
-#endif
-            }
-            else if (!string.IsNullOrEmpty(_playaSeparatorAttribute.Title))
-            {
-                newRichXml = $"<color=#{_colorHex}>{_playaSeparatorAttribute.Title}</color>";
+                return result;
             }
 
             if (newRichXml != _richXml || (newRichXml != null && newRichXml.Contains("<field")))

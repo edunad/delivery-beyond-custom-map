@@ -25,6 +25,30 @@ namespace SaintsField.Editor.Utils
             return property.FindPropertyRelative(RuntimeUtil.GetAutoPropertyName(propName));
         }
 
+        public static string TrimKBackingField(string oriName)
+        {
+            const string suffix = ">k__BackingField";  // 16 chars
+            const int suffixLength = 16;
+
+            const int minLength = 1 + suffixLength;
+
+            int originalLength = oriName.Length;
+            if (originalLength <= minLength)
+            {
+                return oriName;
+            }
+
+            ReadOnlySpan<char> span = oriName.AsSpan();
+
+            if (span[0] != '<' || !span.EndsWith(suffix))
+            {
+                return oriName;
+            }
+
+            ReadOnlySpan<char> sliced = span.Slice(1, originalLength - minLength);
+            return new string(sliced);
+        }
+
         public static bool IsArrayOrDirectlyInsideArray(SerializedProperty property)
         {
             bool extractFromArrayType = property.propertyType == SerializedPropertyType.Generic && property.isArray;
@@ -243,7 +267,21 @@ namespace SaintsField.Editor.Utils
             string[] paths = property.propertyPath.Split(DotSplitSeparator);
 
             (bool _, string[] propPathSegments) = TrimEndArray(paths);
-            return $"{property.serializedObject.targetObject.GetInstanceID()}_{string.Join(".", propPathSegments)}";
+
+#if UNITY_6000_4_OR_NEWER
+            EntityId
+#else
+            int
+#endif
+                objectId = property.serializedObject.targetObject.
+#if UNITY_6000_4_OR_NEWER
+                    GetEntityId
+#else
+                    GetInstanceID
+#endif
+                        ();
+
+            return $"{objectId}_{string.Join(".", propPathSegments)}";
         }
 
         public static (string error, SerializedProperty property) GetArrayProperty(SerializedProperty property)
@@ -384,16 +422,28 @@ namespace SaintsField.Editor.Utils
 
         public static string GetUniqueId(SerializedProperty property)
         {
-            return $"{property.serializedObject.targetObject.GetInstanceID()}_{property.propertyPath}";
+#if UNITY_6000_4_OR_NEWER
+            EntityId
+#else
+            int
+#endif
+                objectId = property.serializedObject.targetObject.
+#if UNITY_6000_4_OR_NEWER
+                GetEntityId
+#else
+                GetInstanceID
+#endif
+                ();
+
+            return $"{objectId}_{property.propertyPath}";
         }
 
         public static bool IsOk(SerializedProperty property)
         {
             try
             {
-                int _ = property.serializedObject.targetObject.GetInstanceID();
-                string __ = property.propertyPath;
-                string ___ = property.displayName;
+                string _ = GetUniqueId(property);
+                string __ = property.displayName;
             }
             catch (NullReferenceException)
             {
@@ -737,7 +787,7 @@ namespace SaintsField.Editor.Utils
                     return (true, property.boundsIntValue);
 #if UNITY_2019_3_OR_NEWER
                 case SerializedPropertyType.ManagedReference:
-                    return (false, null);
+                    return (true, property.managedReferenceValue);
 #endif
                 case SerializedPropertyType.Generic:
                 {

@@ -25,10 +25,6 @@ namespace SaintsField.Editor.Playa.Renderer.ShowInInspectorFieldFakeRenderer
             }
         }
 
-        public override void OnDestroy()
-        {
-        }
-
 #if UNITY_2021_3_OR_NEWER
         private readonly UnityEvent<string> _onSearchFieldUIToolkit = new UnityEvent<string>();
 #endif
@@ -96,7 +92,7 @@ namespace SaintsField.Editor.Playa.Renderer.ShowInInspectorFieldFakeRenderer
                     if (!string.IsNullOrEmpty(callback))
                     {
                         (object _, object useTarget) = GetRefreshedTarget(fieldWithInfo, fieldWithInfo.Targets[0]);
-                        (string error, object _) = Util.GetOf<object>(callback, null, fieldWithInfo.SerializedProperty,
+                        (string error, MemberInfo _, object _) = Util.GetOf<object>(callback, null, fieldWithInfo.SerializedProperty,
                             (MemberInfo)fieldWithInfo.FieldInfo ?? fieldWithInfo.PropertyInfo, useTarget, new[]{value});
                         if (error != "")
                         {
@@ -116,7 +112,7 @@ namespace SaintsField.Editor.Playa.Renderer.ShowInInspectorFieldFakeRenderer
                     if (!string.IsNullOrEmpty(callback))
                     {
                         (object _, object useTarget) = GetRefreshedTarget(fieldWithInfo, fieldWithInfo.Targets[0]);
-                        (string error, object _) = Util.GetOf<object>(callback, null, fieldWithInfo.SerializedProperty,
+                        (string error, MemberInfo _, object _) = Util.GetOf<object>(callback, null, fieldWithInfo.SerializedProperty,
                             (MemberInfo)fieldWithInfo.FieldInfo ?? fieldWithInfo.PropertyInfo, useTarget,
                             new[] { value });
                         if (error != "")

@@ -1,3 +1,4 @@
+#if !SAINTSFIELD_UI_TOOLKIT_DISABLE
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -148,7 +149,7 @@ namespace SaintsField.Editor.Drawers.SaintsWrapTypeDrawer
             dropdownBtn.ButtonElement.style.borderTopLeftRadius = 0;
             dropdownBtn.ButtonElement.style.borderBottomLeftRadius = 0;
             dropdownBtn.labelElement.style.marginLeft = 0;
-            dropdownBtn.TrackPropertyValue(vRef, vr => dropdownBtn.ButtonLabelElement.text = UIToolkitUtils.GetReferencePropertyLabel(vr));
+            dropdownBtn.TrackPropertyValue(vRef, vr => dropdownBtn.ButtonLabelElement.text = Util.GetReferencePropertyLabel(vr));
 
             // var g = SerializedUtils.GetFileOrProp(parentObj, "VRef");
 
@@ -234,3 +235,4 @@ namespace SaintsField.Editor.Drawers.SaintsWrapTypeDrawer
         }
     }
 }
+#endif

@@ -11,9 +11,9 @@ namespace SaintsField.Editor.Drawers.AdvancedDropdownDrawer
 {
     public static class AdvancedDropdownUtil
     {
-        public static (IReadOnlyList<AdvancedDropdownAttributeDrawer.SelectStack> stack, string display) GetSelected(object curValue, IReadOnlyList<AdvancedDropdownAttributeDrawer.SelectStack> curStacks, IAdvancedDropdownList dropdownPage)
+        public static (IReadOnlyList<AdvancedDropdownAttributeDrawer.SelectStack> stack, string display) GetSelected(object curValue, IReadOnlyList<AdvancedDropdownAttributeDrawer.SelectStack> curStacks, IDropdown dropdownPage)
         {
-            foreach ((IAdvancedDropdownList item, int index) in dropdownPage.children.WithIndex())
+            foreach ((IDropdown item, int index) in dropdownPage.children.WithIndex())
             {
                 if (item.isSeparator)
                 {
@@ -52,6 +52,7 @@ namespace SaintsField.Editor.Drawers.AdvancedDropdownDrawer
                 // ReSharper disable once ConvertIfStatementToSwitchStatement
                 if (Util.GetIsEqual(curValue, item.value))
                 {
+                    // Debug.Log($"return with value named {item.displayName}");
                     return (thisLoopResult.ToArray(), item.displayName);
                 }
 #if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_ADVANCED_DROPDOWN
@@ -67,13 +68,13 @@ namespace SaintsField.Editor.Drawers.AdvancedDropdownDrawer
         private const float DefaultSepHeight = 4f;
         private const float TitleHeight = AdvancedDropdownAttribute.TitleHeight;
 
-        public static Vector2 GetSizeIMGUI(IAdvancedDropdownList dropdownListValue, float positionWidth)
+        public static Vector2 GetSizeIMGUI(IDropdown dropdownListValue, float positionWidth)
         {
             float maxChildCount = GetDropdownPageHeight(dropdownListValue, EditorGUIUtility.singleLineHeight, DefaultSepHeight).Max();
             return new Vector2(positionWidth, maxChildCount + TitleHeight);
         }
 
-        public static IEnumerable<float> GetDropdownPageHeight(IAdvancedDropdownList dropdownList, float itemHeight, float sepHeight)
+        public static IEnumerable<float> GetDropdownPageHeight(IDropdown dropdownList, float itemHeight, float sepHeight)
         {
             if (dropdownList.ChildCount() == 0)
             {

@@ -16,7 +16,10 @@
         "SaintsField.Runtime.TypeReference",
         "SaintsField.Runtime.Events",
         "Unity.Collections",
-        "Unity.Serialization"
+        "Unity.Serialization",
+        "SaintsBuild.Editor",
+        "GUID:d8b63aba1907145bea998dd612889d6b",
+        "DOTween.Modules"
     ],
     "includePlatforms": [
         "Editor"
@@ -84,6 +87,26 @@
             "name": "microsoft.codeanalysis.csharp",
             "expression": "",
             "define": "SAINTSFIELD_CODE_ANALYSIS"
+        },
+        {
+          "name": "today.comes.saintsbuild",
+          "expression": "2.0.0",
+          "define": "SAINTSBUILD"
+        },
+        {
+          "name": "com.unity.render-pipelines.universal",
+          "expression": "",
+          "define": "SAINTSFIELD_RENDER_PIPELINE_UNIVERSAL"
+        },
+        {
+          "name": "com.unity.netcode.gameobjects",
+          "expression": "",
+          "define": "SAINTSFIELD_NETCODE_GAMEOBJECTS"
+        },
+        {
+            "name": "com.unity.mathematics",
+            "expression": "",
+            "define": "SAINTSFIELD_UNITY_MATHEMATICS"
         }
     ],
     "noEngineReferences": false

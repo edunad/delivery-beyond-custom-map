@@ -21,9 +21,6 @@ namespace SaintsField.Editor.Drawers.AnimatorParamDrawer
     [CustomPropertyDrawer(typeof(AnimatorParamAttribute), true)]
     public partial class AnimatorParamAttributeDrawer : SaintsPropertyDrawer, IAutoRunnerFixDrawer
     {
-        // private const string InvalidAnimatorControllerWarningMessage = "Target animator controller is null";
-        private string _error = "";
-
         private struct MetaInfo
         {
             // ReSharper disable InconsistentNaming
@@ -44,7 +41,7 @@ namespace SaintsField.Editor.Drawers.AnimatorParamDrawer
             if (animatorName != null)
             {
                 // search parent first
-                (string error, Animator result) = Util.GetOf<Animator>(animatorName, null, property, info, parent, null);
+                (string error, MemberInfo _, Animator result) = Util.GetOf<Animator>(animatorName, null, property, info, parent, null);
                 if (result == null)
                 {
                     return ($"Animator {animatorName} can not be null.", null);

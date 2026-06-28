@@ -1,4 +1,4 @@
-#if UNITY_2021_3_OR_NEWER
+#if UNITY_2021_3_OR_NEWER && !SAINTSFIELD_UI_TOOLKIT_DISABLE
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -12,7 +12,6 @@ namespace SaintsField.Editor.Drawers.InfoBoxDrawer
 {
     public partial class InfoBoxAttributeDrawer
     {
-        #region UIToolkit
 
         private static string NameInfoBox(SerializedProperty property, int index) =>
             $"{property.propertyPath}_{index}__InfoBox";
@@ -126,8 +125,6 @@ namespace SaintsField.Editor.Drawers.InfoBoxDrawer
                 infoBox.userData = metaInfo;
             }
         }
-
-        #endregion
     }
 }
 #endif

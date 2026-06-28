@@ -4,6 +4,7 @@ using System.Reflection;
 using SaintsField.Editor.Core;
 using SaintsField.Editor.Utils;
 using SaintsField.Interfaces;
+using SaintsField.Utils;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,12 +14,6 @@ namespace SaintsField.Editor.Drawers.RichLabelDrawer
     {
 
         private string _error = "";
-
-        protected override void ImGuiOnDispose()
-        {
-            base.ImGuiOnDispose();
-            _richTextDrawer.Dispose();
-        }
 
         protected override bool WillDrawLabel(SerializedProperty property, ISaintsAttribute saintsAttribute,
             FieldInfo info,
@@ -37,9 +32,13 @@ namespace SaintsField.Editor.Drawers.RichLabelDrawer
         protected override void DrawLabel(Rect position, SerializedProperty property, GUIContent label,
             ISaintsAttribute saintsAttribute, FieldInfo info, object parent)
         {
+            if (overrideRichTextChunks != null)
+            {
+                return;
+            }
+
             FieldLabelTextAttribute targetAttribute = (FieldLabelTextAttribute)saintsAttribute;
 
-            ImGuiEnsureDispose(property.serializedObject.targetObject);
             (string error, string labelXml) = RichTextDrawer.GetLabelXml(property, targetAttribute.RichTextXml,
                 targetAttribute.IsCallback, info, parent);
             _error = error;
@@ -49,15 +48,15 @@ namespace SaintsField.Editor.Drawers.RichLabelDrawer
                 return;
             }
 
-            string labelText = label.text;
-#if SAINTSFIELD_NAUGHYTATTRIBUTES
-            labelText = property.displayName;
-#endif
+//             string labelText = label.text;
+// #if SAINTSFIELD_NAUGHYTATTRIBUTES
+//             labelText = property.displayName;
+// #endif
 
             RichTextDrawer.RichTextChunk[] parsedXmlNode =
-                RichTextDrawer.ParseRichXml(labelXml, labelText, property, info, parent).ToArray();
+                RichTextDrawer.ParseRichXmlWithProvider(labelXml, this).ToArray();
 
-            _richTextDrawer.DrawChunks(position, label, parsedXmlNode);
+            _richTextDrawer.DrawChunks(position, parsedXmlNode);
         }
 
         protected override float GetBelowExtraHeight(SerializedProperty property, GUIContent label, float width,
@@ -69,7 +68,7 @@ namespace SaintsField.Editor.Drawers.RichLabelDrawer
 
         protected override Rect DrawBelow(Rect position, SerializedProperty property, GUIContent label,
             ISaintsAttribute saintsAttribute, int index, IReadOnlyList<PropertyAttribute> allAttributes,
-            OnGUIPayload onGuiPayload, FieldInfo info, object parent)
+            FieldInfo info, object parent)
         {
             return _error == "" ? position : ImGuiHelpBox.Draw(position, _error, MessageType.Error);
         }

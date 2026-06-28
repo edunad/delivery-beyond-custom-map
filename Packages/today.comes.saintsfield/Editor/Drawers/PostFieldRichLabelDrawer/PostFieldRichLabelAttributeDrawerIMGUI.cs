@@ -4,6 +4,7 @@ using System.Reflection;
 using SaintsField.Editor.Core;
 using SaintsField.Editor.Utils;
 using SaintsField.Interfaces;
+using SaintsField.Utils;
 using UnityEditor;
 using UnityEngine;
 
@@ -30,11 +31,7 @@ namespace SaintsField.Editor.Drawers.PostFieldRichLabelDrawer
                 NoLongerInspectingWatch(property.serializedObject.targetObject, key, () =>
                 {
                     // ReSharper disable once InvertIf
-                    if (ImGuiCache.TryGetValue(key, out info))
-                    {
-                        info.RichTextDrawer.Dispose();
-                        ImGuiCache.Remove(key);
-                    }
+                    ImGuiCache.Remove(key);
                 });
             }
 
@@ -45,7 +42,7 @@ namespace SaintsField.Editor.Drawers.PostFieldRichLabelDrawer
         private IReadOnlyList<RichTextDrawer.RichTextChunk> _payloads;
 
         protected override float GetPostFieldWidth(Rect position, SerializedProperty property, GUIContent label,
-            ISaintsAttribute saintsAttribute, int index, OnGUIPayload onGuiPayload, FieldInfo info, object parent)
+            ISaintsAttribute saintsAttribute, int index, FieldInfo info, object parent)
         {
             EndTextAttribute targetAttribute = (EndTextAttribute)saintsAttribute;
             (string error, string xml) = RichTextDrawer.GetLabelXml(property, targetAttribute.RichTextXml,
@@ -61,14 +58,14 @@ namespace SaintsField.Editor.Drawers.PostFieldRichLabelDrawer
                 return 0;
             }
 
-            _payloads = RichTextDrawer.ParseRichXml(xml, label.text, property, info, parent).ToArray();
+            _payloads = RichTextDrawer.ParseRichXmlWithProvider(xml, this).ToArray();
             return cache.RichTextDrawer.GetWidth(label, position.height, _payloads) + targetAttribute.Padding;
         }
 
         protected override bool DrawPostFieldImGui(Rect position, Rect fullRect, SerializedProperty property,
             GUIContent label,
             ISaintsAttribute saintsAttribute, int index, IReadOnlyList<PropertyAttribute> allAttributes,
-            OnGUIPayload onGUIPayload, FieldInfo info, object parent)
+            FieldInfo info, object parent)
         {
             ImGuiCacheInfo cache = EnsureKey(property);
             if (cache.Error != "")
@@ -90,7 +87,7 @@ namespace SaintsField.Editor.Drawers.PostFieldRichLabelDrawer
             };
 
             ImGuiEnsureDispose(property.serializedObject.targetObject);
-            cache.RichTextDrawer.DrawChunks(drawRect, label, _payloads);
+            cache.RichTextDrawer.DrawChunks(drawRect, _payloads);
 
             return true;
         }
@@ -114,7 +111,7 @@ namespace SaintsField.Editor.Drawers.PostFieldRichLabelDrawer
 
         protected override Rect DrawBelow(Rect position, SerializedProperty property, GUIContent label,
             ISaintsAttribute saintsAttribute, int index, IReadOnlyList<PropertyAttribute> allAttributes,
-            OnGUIPayload onGuiPayload, FieldInfo info, object parent)
+            FieldInfo info, object parent)
         {
             string error = EnsureKey(property).Error;
             return error == ""

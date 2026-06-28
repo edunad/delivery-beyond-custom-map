@@ -1,3 +1,4 @@
+#if UNITY_2021_2_OR_NEWER
 using System;
 using SaintsField.Editor.Utils;
 using UnityEngine;
@@ -297,3 +298,4 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
         }
     }
 }
+#endif

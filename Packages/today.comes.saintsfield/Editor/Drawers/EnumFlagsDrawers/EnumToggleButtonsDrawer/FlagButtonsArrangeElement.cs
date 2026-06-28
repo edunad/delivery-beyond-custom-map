@@ -1,4 +1,4 @@
-using SaintsField.Editor.Drawers.ValueButtonsDrawer;
+#if UNITY_2021_3_OR_NEWER
 using SaintsField.Editor.UIToolkitElements.ValueButtons;
 
 namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
@@ -20,3 +20,4 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
         }
     }
 }
+#endif

@@ -15,6 +15,7 @@ namespace SaintsField.Editor.Drawers.ResizableTextAreaDrawer
 
         protected override float GetFieldHeight(SerializedProperty property, GUIContent label,
             float width,
+            int index,
             ISaintsAttribute saintsAttribute, FieldInfo info, bool hasLabelWidth, object parent)
         {
             // _hasLabel = hasLabel;
@@ -40,7 +41,7 @@ namespace SaintsField.Editor.Drawers.ResizableTextAreaDrawer
         }
 
         protected override void DrawField(Rect position, SerializedProperty property, GUIContent label,
-            ISaintsAttribute saintsAttribute, IReadOnlyList<PropertyAttribute> allAttributes, OnGUIPayload onGUIPayload,
+            ISaintsAttribute saintsAttribute, IReadOnlyList<PropertyAttribute> allAttributes,
             FieldInfo info, object parent)
         {
             // EditorGUI.DrawRect(position, Color.blue);
@@ -48,7 +49,8 @@ namespace SaintsField.Editor.Drawers.ResizableTextAreaDrawer
             if (property.propertyType != SerializedPropertyType.String)
             {
                 _error = $"expect string, get {property.propertyType}";
-                DefaultDrawer(position, property, label, info);
+                RawDefaultDrawer(position, property, allAttributes, label, info);
+                DrawOverrideRichText(position, label, overrideRichTextChunks);
                 return;
             }
 
@@ -73,6 +75,7 @@ namespace SaintsField.Editor.Drawers.ResizableTextAreaDrawer
                     (Rect labelFieldRect, Rect textAreaRect) =
                         RectUtils.SplitHeightRect(position, EditorGUIUtility.singleLineHeight);
                     EditorGUI.LabelField(labelFieldRect, label);
+                    DrawOverrideRichText(labelFieldRect, label, overrideRichTextChunks);
                     position = textAreaRect;
                 }
 
@@ -113,7 +116,7 @@ namespace SaintsField.Editor.Drawers.ResizableTextAreaDrawer
 
         protected override Rect DrawBelow(Rect position, SerializedProperty property, GUIContent label,
             ISaintsAttribute saintsAttribute, int index, IReadOnlyList<PropertyAttribute> allAttributes,
-            OnGUIPayload onGuiPayload, FieldInfo info, object parent) =>
+            FieldInfo info, object parent) =>
             _error == "" ? position : ImGuiHelpBox.Draw(position, _error, MessageType.Error);
 
     }

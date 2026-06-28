@@ -49,7 +49,13 @@ namespace SaintsField.Editor.Drawers.AnimatorParamDrawer
                     {
                         bindingPath = property.propertyPath,
                     };
-                    AnimatorParamIntField field = new AnimatorParamIntField(GetPreferredLabel(property), bindableElement);
+                    AnimatorParamIntField field = new AnimatorParamIntField(GetPreferredLabel(property), bindableElement)
+                    {
+                        style =
+                        {
+                            flexShrink = 1,
+                        },
+                    };
                     field.AddToClassList(ClassAllowDisable);
                     field.AddToClassList(AnimatorParamIntField.alignedFieldUssClassName);
                     return field;
@@ -210,7 +216,7 @@ namespace SaintsField.Editor.Drawers.AnimatorParamDrawer
                 }
             }));
         }
-        
+
         private static MetaInfo GetMetaInfoShowInInspector(AnimatorParamAttribute animatorParamAttribute, object parent)
         {
             Animator animator;
@@ -374,7 +380,7 @@ namespace SaintsField.Editor.Drawers.AnimatorParamDrawer
                     value = value,
                 };
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -407,7 +413,7 @@ namespace SaintsField.Editor.Drawers.AnimatorParamDrawer
                 });
             }
         }
-        
+
         public static VisualElement UIToolkitValueEditInt(VisualElement oldElement, AnimatorParamAttribute animatorParamAttribute, string label, int value, Action<object> beforeSet, Action<object> setterOrNull, bool labelGrayColor, bool inHorizontalLayout, IReadOnlyList<Attribute> allAttributes, IReadOnlyList<object> targets)
         {
             MetaInfo metaInfo = GetMetaInfoShowInInspector(
@@ -440,7 +446,7 @@ namespace SaintsField.Editor.Drawers.AnimatorParamDrawer
                     value = value,
                 };
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)

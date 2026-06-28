@@ -1,4 +1,4 @@
-﻿#if UNITY_2021_3_OR_NEWER //&& !SAINTSFIELD_UI_TOOLKIT_DISABLE
+#if UNITY_2021_3_OR_NEWER
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,9 +6,8 @@ using System.Linq;
 using System.Reflection;
 using SaintsField.Editor.Core;
 using SaintsField.Editor.Drawers.FieldContextMenuDrawer;
+using SaintsField.Editor.Drawers.GUIColor;
 using SaintsField.Editor.Linq;
-#if UNITY_2021_2_OR_NEWER
-#endif
 using SaintsField.Editor.Utils;
 using SaintsField.Playa;
 using UnityEditor;
@@ -17,7 +16,7 @@ using UnityEngine.UIElements;
 
 namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
 {
-    public abstract partial class AbsRenderer: IRichTextTagProvider
+    public abstract partial class AbsRenderer
     {
         private const string ClassSaintsFieldPlaya = "saintsfield-playa";
         public const string ClassSaintsFieldEditingDisabled = "saintsfield-editing-disabled";
@@ -202,13 +201,15 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
             return null;
         }
 
+        public abstract void OnDestroyUIToolkit();
+
         protected abstract (VisualElement target, bool needUpdate) CreateTargetUIToolkit(VisualElement inspectorRoot,
             VisualElement container);
 
 
         protected virtual PreCheckResult OnUpdateUIToolKit(VisualElement root)
         {
-            return UpdatePreCheckUIToolkitInternal(FieldWithInfo, _rootElement);
+            return UpdatePreCheckUIToolkitInternal(FieldWithInfo, root);
         }
 
         // protected PreCheckResult HelperOnUpdateUIToolKitRawBase()
@@ -227,7 +228,6 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
         protected PreCheckResult UpdatePreCheckUIToolkitInternal(SaintsFieldWithInfo fieldWithInfo, VisualElement result)
         {
             PreCheckResult preCheckResult = GetPreCheckResult(fieldWithInfo, false);
-            // Debug.Log($"{preCheckResult.HasGuiColor}/{preCheckResult.GuiColor}");
             if(result.enabledSelf != !preCheckResult.IsDisabled)
             {
                 result.SetEnabled(!preCheckResult.IsDisabled);
@@ -255,20 +255,7 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
 
         // before set: useful for struct editing that C# will mess-up and change the value of the reference you have
 
-        private static readonly Type[] SkipTypes = { typeof(IntPtr), typeof(UIntPtr), typeof(void) };
 
-        public static bool SkipTypeDrawing(Type checkType)
-        {
-            foreach (Type disallowType in SkipTypes)
-            {
-                if (disallowType.IsAssignableFrom(checkType))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
 
         public static string GetDropdownTypeLabel(Type type)
         {
@@ -277,263 +264,21 @@ namespace SaintsField.Editor.Playa.Renderer.BaseRenderer
                 : $"{type.Name}: <color=#{ColorUtility.ToHtmlStringRGB(EColor.Gray.GetColor())}>{type.Namespace}</color>";
         }
 
-        public static (object rawMemberValue, object useTarget) GetRefreshedTarget(SaintsFieldWithInfo fieldWithInfo, object eachTarget)
+        public string ApplyGuiColor(VisualElement result)
         {
-            bool isStruct = ReflectUtils.TypeIsStruct(eachTarget.GetType());
-            object useTarget = eachTarget;
-            object rawMemberValue = eachTarget;
-            if (isStruct && fieldWithInfo.TargetParent != null && fieldWithInfo.TargetMemberInfo != null)
+            if (!HasGuiColor())
             {
-                switch (fieldWithInfo.TargetMemberInfo)
-                {
-                    case FieldInfo fieldInfo:
-                    {
-                        try
-                        {
-                            useTarget = rawMemberValue =  fieldInfo.GetValue(fieldWithInfo.TargetParent);
-                            if (fieldWithInfo.TargetMemberIndex != -1)
-                            {
-                                useTarget = GetCollectionIndex(useTarget, fieldWithInfo.TargetMemberIndex);
-                            }
-                            // Debug.Log($"useTarget={useTarget}");
-                        }
-                        catch (Exception e)
-                        {
-#if SAINTSFIELD_DEBUG
-                            Debug.LogException(e);
-#endif
-                        }
-                    }
-                        break;
-                    case PropertyInfo propertyInfo:
-                    {
-                        if (propertyInfo.CanRead)
-                        {
-                            try
-                            {
-                                useTarget = rawMemberValue = propertyInfo.GetValue(fieldWithInfo.TargetParent);
-                                if (fieldWithInfo.TargetMemberIndex != -1)
-                                {
-                                    useTarget = GetCollectionIndex(useTarget, fieldWithInfo.TargetMemberIndex);
-                                }
-                            }
-                            catch (Exception e)
-                            {
-#if SAINTSFIELD_DEBUG
-                                Debug.LogException(e);
-#endif
-                            }
-                        }
-                    }
-                        break;
-                }
+                return "";
+            }
+            (string error, Color color) = GUIColorAttributeDrawer.GetColor(_guiColorAttribute, FieldWithInfo.SerializedProperty,
+                (MemberInfo)FieldWithInfo.FieldInfo ?? (MemberInfo)FieldWithInfo.PropertyInfo ?? FieldWithInfo.MethodInfo, FieldWithInfo.Targets[0]);
+
+            if (error == "")
+            {
+                UIToolkitUtils.ApplyColor(result, color);
             }
 
-            return (rawMemberValue, useTarget);
-        }
-
-        public string GetLabel()
-        {
-            switch (FieldWithInfo.RenderType)
-            {
-                case SaintsRenderType.SerializedField:
-                case SaintsRenderType.InjectedSerializedField:
-                {
-                    // ReSharper disable once ConvertIfStatementToReturnStatement
-                    if (SerializedUtils.IsOk(FieldWithInfo.SerializedProperty))
-                    {
-                        return FieldWithInfo.SerializedProperty.displayName;
-                    }
-
-                    return "";
-                }
-                case SaintsRenderType.NonSerializedField:
-                {
-                    if (FieldWithInfo.FieldInfo != null)
-                    {
-                        return ObjectNames.NicifyVariableName(FieldWithInfo.FieldInfo.Name);
-                    }
-
-                    return "";
-                }
-                case SaintsRenderType.Method:
-                    return ObjectNames.NicifyVariableName(FieldWithInfo.MethodInfo.Name);
-                case SaintsRenderType.NativeProperty:
-                    return ObjectNames.NicifyVariableName(FieldWithInfo.PropertyInfo.Name);
-                case SaintsRenderType.ClassStruct:
-                    return ObjectNames.NicifyVariableName(FieldWithInfo.ClassStructType.Name);
-                case SaintsRenderType.Other:
-                    return "";
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(FieldWithInfo.RenderType), FieldWithInfo.RenderType, null);
-            }
-        }
-
-        public string GetContainerType()
-        {
-            return GetTargetType().Name;
-        }
-
-        private Type GetTargetType()
-        {
-            return  FieldWithInfo.ClassStructType ?? FieldWithInfo.Targets[0].GetType();
-        }
-
-        public string GetContainerTypeBaseType()
-        {
-            return GetTargetType().BaseType?.Name ?? "";
-        }
-
-        public string GetIndex(string formatter)
-        {
-            switch (FieldWithInfo.RenderType)
-            {
-                case SaintsRenderType.SerializedField:
-                case SaintsRenderType.InjectedSerializedField:
-                {
-                    // ReSharper disable once ConvertIfStatementToReturnStatement
-                    if (!SerializedUtils.IsOk(FieldWithInfo.SerializedProperty))
-                    {
-                        return "";
-                    }
-
-                    int propPath = SerializedUtils.PropertyPathIndex(FieldWithInfo.SerializedProperty.propertyPath);
-                    return propPath < 0 ? "" : propPath.ToString();
-                }
-                case SaintsRenderType.NonSerializedField:
-                case SaintsRenderType.Method:
-                case SaintsRenderType.NativeProperty:
-                case SaintsRenderType.ClassStruct:
-                case SaintsRenderType.Other:
-                    return "";
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(FieldWithInfo.RenderType), FieldWithInfo.RenderType, null);
-            }
-        }
-
-        public string GetField(string rawContent, string tagName, string tagValue)
-        {
-            switch (FieldWithInfo.RenderType)
-            {
-                case SaintsRenderType.SerializedField:
-                case SaintsRenderType.InjectedSerializedField:
-                {
-                    if (!SerializedUtils.IsOk(FieldWithInfo.SerializedProperty))
-                    {
-                        return "";
-                    }
-
-                    // string error = "";
-
-                    (string error, int index, object value) result = Util.GetValue(FieldWithInfo.SerializedProperty, FieldWithInfo.FieldInfo, FieldWithInfo.Targets[0]);
-                    // (string error, int index, object value) accResult = result;
-                    if (result.error != "")
-                    {
-                        // error = result.error;
-                    }
-                    else
-                    {
-                        if (tagName == "field")
-                        {
-                        }
-                        else
-                        {
-                            string revName = tagName["field.".Length..];
-
-                            (string error, object result) getOfValue = Util.GetOf<object>(revName, null,
-                                FieldWithInfo.SerializedProperty,
-                                FieldWithInfo.FieldInfo, result.value, null);
-
-                            // hasError = getOfValue.error != "";
-                            // error = getOfValue.error;
-                            result = (getOfValue.error, result.index, getOfValue.result);
-                        }
-                    }
-
-                    // ReSharper disable once InvertIf
-                    if (result.error != "")
-                    {
-#if SAINTSFIELD_DEBUG
-                        Debug.LogWarning(result.error);
-#endif
-                        return rawContent;
-                    }
-
-                    return RichTextDrawer.TagStringFormatter(result.value, tagValue);
-                }
-                case SaintsRenderType.NonSerializedField:
-                case SaintsRenderType.Method:
-                case SaintsRenderType.NativeProperty:
-                case SaintsRenderType.ClassStruct:
-                case SaintsRenderType.Other:
-                    return "";
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(FieldWithInfo.RenderType), FieldWithInfo.RenderType, null);
-            }
-        }
-
-        protected void BackWriteCallback(object rawMemberValue, object useTarget)
-        {
-            bool isStruct = ReflectUtils.TypeIsStruct(FieldWithInfo.Targets[0].GetType());
-            if (isStruct && FieldWithInfo.TargetParent != null && FieldWithInfo.TargetMemberInfo != null)
-            {
-                // Debug.Log($"write back {FieldWithInfo.TargetParent}:{FieldWithInfo.TargetMemberInfo.Name}");
-                switch (FieldWithInfo.TargetMemberInfo)
-                {
-                    case FieldInfo fieldInfo:
-                    {
-                        if (FieldWithInfo.TargetMemberIndex != -1)
-                        {
-                            if(rawMemberValue != null)
-                            {
-                                Util.SetCollectionIndex(rawMemberValue, FieldWithInfo.TargetMemberIndex, useTarget);
-                            }
-                        }
-                        else
-                        {
-                            try
-                            {
-                                fieldInfo.SetValue(FieldWithInfo.TargetParent, useTarget);
-                            }
-                            catch (Exception e)
-                            {
-#if SAINTSFIELD_DEBUG
-                                Debug.LogException(e);
-#endif
-                            }
-                        }
-                    }
-                        break;
-                    case PropertyInfo propertyInfo:
-                    {
-                        if (propertyInfo.CanWrite)
-                        {
-                            if (FieldWithInfo.TargetMemberIndex != -1)
-                            {
-                                if(rawMemberValue != null)
-                                {
-                                    Util.SetCollectionIndex(rawMemberValue, FieldWithInfo.TargetMemberIndex,
-                                        useTarget);
-                                }
-                            }
-                            else
-                            {
-                                try
-                                {
-                                    propertyInfo.SetValue(FieldWithInfo.TargetParent, useTarget);
-                                }
-                                catch (Exception e)
-                                {
-#if SAINTSFIELD_DEBUG
-                                    Debug.LogException(e);
-#endif
-                                }
-                            }
-                        }
-                    }
-                        break;
-                }
-            }
+            return error;
         }
     }
 }

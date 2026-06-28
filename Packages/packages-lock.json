@@ -39,10 +39,10 @@
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "c2af83c9d4f8cdaada9d4a0e94de2f195d8e1d01"
+      "hash": "acc1c7bc9ea34c33b830e40316fca52553878d29"
     },
     "com.unity.burst": {
-      "version": "1.8.28",
+      "version": "1.8.29",
       "depth": 2,
       "source": "registry",
       "dependencies": {
@@ -70,7 +70,7 @@
       "dependencies": {}
     },
     "com.unity.ide.rider": {
-      "version": "3.0.39",
+      "version": "3.0.40",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -102,7 +102,7 @@
         "com.unity.nuget.mono-cecil": "1.11.4",
         "com.unity.transport": "2.6.0"
       },
-      "hash": "1495955aaf5f91da1ea36892ab45d32bdb26bcf0"
+      "hash": "dcd8147281f2c7aabb7601e16fb9dcff9aa11c58"
     },
     "com.unity.nuget.mono-cecil": {
       "version": "1.11.6",
@@ -169,7 +169,7 @@
       }
     },
     "com.unity.test-framework.performance": {
-      "version": "3.2.0",
+      "version": "3.5.0",
       "depth": 3,
       "source": "registry",
       "dependencies": {
@@ -191,7 +191,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.transport": {
-      "version": "2.6.0",
+      "version": "2.7.2",
       "depth": 1,
       "source": "registry",
       "dependencies": {

@@ -1,4 +1,4 @@
-#if SAINTSFIELD_SERIALIZATION && !SAINTSFIELD_SERIALIZATION_DISABLED && UNITY_2022_2_OR_NEWER && !SAINTSFIELD_UI_TOOLKIT_DISABLE
+#if UNITY_2021_3_OR_NEWER
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -187,7 +187,7 @@ namespace SaintsField.Editor.Drawers.SaintsEventBaseTypeDrawer
                     .GetTypesDerivedFrom(fieldType)
                     .ToArray();
 
-                AdvancedDropdownList<Type> dropdownList = new AdvancedDropdownList<Type>();
+                Dropdown<Type> dropdownList = new Dropdown<Type>();
                 bool canBeNull = !fieldType.IsValueType;
                 if(canBeNull)
                 {
@@ -201,7 +201,7 @@ namespace SaintsField.Editor.Drawers.SaintsEventBaseTypeDrawer
                 foreach (Type type in optionTypes)
                 {
                     string displayName = AbsRenderer.GetDropdownTypeLabel(type);
-                    dropdownList.Add(new AdvancedDropdownList<Type>(displayName, type));
+                    dropdownList.Add(new Dropdown<Type>(displayName, type));
                 }
 
                 AdvancedDropdownMetaInfo metaInfo = new AdvancedDropdownMetaInfo
@@ -509,7 +509,13 @@ namespace SaintsField.Editor.Drawers.SaintsEventBaseTypeDrawer
                         // Debug.Log($"re-render SerializedValueEditorRepaint");
                         SerializedValueEditorRepaint();
 
-                    }, false, true, ReflectCache.GetCustomAttributes(info), property.serializedObject.targetObjects, new RichTextDrawer.EmptyRichTextTagProvider());
+                    },
+                    false,
+                    true,
+                    ReflectCache.GetCustomAttributes(info),
+                    property.serializedObject.targetObjects,
+                    new RichTextDrawer.EmptyRichTextTagProvider(),
+                    SerializedUtils.GetUniqueId(property));
 
                 if (result != null)
                 {

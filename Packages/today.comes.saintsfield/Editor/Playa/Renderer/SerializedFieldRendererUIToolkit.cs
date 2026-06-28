@@ -1,4 +1,5 @@
-#if UNITY_2021_3_OR_NEWER // && !SAINTSFIELD_UI_TOOLKIT_DISABLE
+#if UNITY_2021_3_OR_NEWER
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using SaintsField.Editor.Playa.Renderer.BaseRenderer;
@@ -6,7 +7,6 @@ using SaintsField.Editor.Utils;
 using SaintsField.Playa;
 using UnityEditor;
 using UnityEditor.UIElements;
-using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace SaintsField.Editor.Playa.Renderer
@@ -32,19 +32,19 @@ namespace SaintsField.Editor.Playa.Renderer
                 // Debug.Log(string.Join(",", FieldWithInfo.PlayaAttributes));
                 // Debug.Log(FieldWithInfo.PlayaAttributes.Any(each => each is SaintsSerializedAttribute));
                 // Debug.Log(FieldWithInfo.PlayaAttributes.Any(each => each is SaintsSerializedAttribute));
-                // if (elementType == typeof(SaintsSerializedProperty) && label.EndsWith("__Saints Serialized__"))
-                if (label.EndsWith("__Saints Serialized__") && FieldWithInfo.PlayaAttributes.Any(each => each is SaintsSerializedAttribute))
+                if (label.EndsWith(Util.SaintsSerializedLabelSuffix) && FieldWithInfo.PlayaAttributes.Any(each => each is SaintsSerializedAttribute))
                 {
-                    label = label[..^"__Saints Serialized__".Length];
+                    label = label[..^Util.SaintsSerializedLabelSuffix.Length];
                 }
             }
             VisualElement r = UIToolkitUtils.CreateOrUpdateFieldProperty(
                 FieldWithInfo.SerializedProperty,
-                ReflectCache.GetCustomAttributes<PropertyAttribute>(FieldWithInfo.FieldInfo),
+                ReflectCache.GetCustomAttributes<Attribute>(FieldWithInfo.FieldInfo),
                 FieldWithInfo.FieldInfo.FieldType,
                 label,
                 FieldWithInfo.FieldInfo,
                 InAnyHorizontalLayout,
+                this,
                 this,
                 this,
                 null,
@@ -261,6 +261,10 @@ namespace SaintsField.Editor.Playa.Renderer
         public IEnumerable<IReadOnlyList<AbsRenderer>> MakeRenderer(SerializedObject serializedObject, SaintsFieldWithInfo fieldWithInfo)
         {
             return SaintsEditor.HelperMakeRenderer(serializedObject, fieldWithInfo);
+        }
+
+        public override void OnDestroyUIToolkit()
+        {
         }
     }
 }

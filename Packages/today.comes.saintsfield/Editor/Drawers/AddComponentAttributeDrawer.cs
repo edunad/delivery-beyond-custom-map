@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if UNITY_2021_3_OR_NEWER && !SAINTSFIELD_UI_TOOLKIT_DISABLE
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using SaintsField.Editor.Core;
@@ -17,14 +18,14 @@ namespace SaintsField.Editor.Drawers
     public class AddComponentAttributeDrawer: SaintsPropertyDrawer
     {
         protected override float GetPostFieldWidth(Rect position, SerializedProperty property, GUIContent label,
-            ISaintsAttribute saintsAttribute, int index, OnGUIPayload onGuiPayload, FieldInfo info, object parent) => 0;
+            ISaintsAttribute saintsAttribute, int index, FieldInfo info, object parent) => 0;
 
         protected override bool DrawPostFieldImGui(Rect position, Rect fullRect, SerializedProperty property,
             GUIContent label,
             ISaintsAttribute saintsAttribute,
             int index,
             IReadOnlyList<PropertyAttribute> allAttributes,
-            OnGUIPayload onGUIPayload, FieldInfo info, object parent)
+            FieldInfo info, object parent)
         {
             return DoCheckComponent(property, saintsAttribute, info);
         }
@@ -77,3 +78,4 @@ namespace SaintsField.Editor.Drawers
 #endif
     }
 }
+#endif

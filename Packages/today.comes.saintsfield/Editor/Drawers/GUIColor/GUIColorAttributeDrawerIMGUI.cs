@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Reflection;
+using SaintsField.Editor.Utils;
 using SaintsField.Interfaces;
 using UnityEditor;
 using UnityEngine;
@@ -10,15 +11,16 @@ namespace SaintsField.Editor.Drawers.GUIColor
     {
         private static readonly Dictionary<string, Color> _idToOriginalColor = new Dictionary<string, Color>();
 
-        private static string GetKey(SerializedProperty property) => $"{property.serializedObject.targetObject.GetInstanceID()}_{property.propertyPath}";
+        private static string GetKey(SerializedProperty property) => SerializedUtils.GetUniqueId(property);
 
         protected override bool WillDrawAbove(SerializedProperty property, ISaintsAttribute saintsAttribute, FieldInfo info, object parent)
         {
             return true;
         }
 
-        protected override Rect DrawAboveImGui(Rect position, SerializedProperty property, GUIContent label, ISaintsAttribute saintsAttribute,
-            OnGUIPayload onGUIPayload, FieldInfo info, object parent)
+        protected override Rect DrawAboveImGui(Rect position, SerializedProperty property, GUIContent label,
+            ISaintsAttribute saintsAttribute, int index,
+            FieldInfo info, object parent)
         {
             GUIColorAttribute guiColorAttribute = (GUIColorAttribute)saintsAttribute;
             (string error, Color color) = GetColor(guiColorAttribute, property, info, parent);
@@ -40,7 +42,8 @@ namespace SaintsField.Editor.Drawers.GUIColor
             return position;
         }
 
-        protected override void OnPropertyEndImGui(SerializedProperty property, GUIContent label, ISaintsAttribute saintsAttribute, int saintsIndex, OnGUIPayload onGUIPayload, FieldInfo info, object parent)
+        protected override void OnPropertyEndImGui(Rect labelFieldRect, SerializedProperty property, GUIContent label,
+            ISaintsAttribute saintsAttribute, int saintsIndex, FieldInfo info, object parent)
         {
             string key = GetKey(property);
             if (_idToOriginalColor.TryGetValue(key, out Color color))

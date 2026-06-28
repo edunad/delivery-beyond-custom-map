@@ -1,4 +1,4 @@
-#if UNITY_2021_3_OR_NEWER // && !SAINTSFIELD_UI_TOOLKIT_DISABLE
+#if UNITY_2021_3_OR_NEWER
 using SaintsField.Editor.Utils;
 using SaintsField.Utils;
 using UnityEditor.UIElements;
@@ -11,6 +11,10 @@ namespace SaintsField.Editor.Playa.SaintsEditorWindowUtils
     {
         private VisualElement _container;
         private Object _value;
+
+        public override void OnDestroyUIToolkit()
+        {
+        }
 
         protected override (VisualElement target, bool needUpdate) CreateTargetUIToolkit(VisualElement inspectorRoot,
             VisualElement container)

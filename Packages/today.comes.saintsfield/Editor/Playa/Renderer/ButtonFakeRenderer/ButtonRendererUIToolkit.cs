@@ -1,4 +1,4 @@
-#if UNITY_2021_3_OR_NEWER //&& !SAINTSFIELD_UI_TOOLKIT_DISABLE
+#if UNITY_2021_3_OR_NEWER
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,7 +7,9 @@ using System.Reflection;
 using SaintsField.Editor.Core;
 using SaintsField.Editor.Linq;
 using SaintsField.Editor.Playa.Renderer.BaseRenderer;
+using SaintsField.Editor.UIToolkitElements;
 using SaintsField.Editor.Utils;
+using SaintsField.Editor.Utils.WaitableUtils;
 using SaintsField.Playa;
 using UnityEditor;
 // ReSharper disable once RedundantUsingDirective
@@ -19,77 +21,68 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
 {
     public partial class ButtonRenderer
     {
-        private static string ButtonName(MethodInfo methodInfo, object target) => $"{target?.GetHashCode()}_{methodInfo.Name}_{string.Join("_", methodInfo.GetParameters().Select(each => each.Name))}__ButtonRenderer";
-        private static string ButtonLabelContainerName(MethodInfo methodInfo, object target) => $"{target?.GetHashCode()}_{methodInfo.Name}_{string.Join("_", methodInfo.GetParameters().Select(each => each.Name))}__ButtonLabelContainer";
+        private static string ButtonName(SaintsFieldWithInfo info) => $"{info.Targets[0]?.GetHashCode()}_{info.MethodInfo.Name}_{string.Join("_", info.MethodInfo.GetParameters().Select(each => each.Name))}__ButtonRenderer";
+        // private static string ButtonLabelContainerName(MethodInfo methodInfo, object target) => $"{target?.GetHashCode()}_{methodInfo.Name}_{string.Join("_", methodInfo.GetParameters().Select(each => each.Name))}__ButtonLabelContainer";
         // private static string ButtonRotatorName(MethodInfo methodInfo, object target) => $"{target?.GetHashCode()}_{methodInfo.Name}_{string.Join("_", methodInfo.GetParameters().Select(each => each.Name))}__ButtonLabelContainer";
 
         private static StyleSheet _ussClassSaintsFieldEditingDisabledHide;
 
-        private class ButtonUserData
+        public class ButtonUserData
         {
             public string Xml;
             public string Callback;
             public bool UpdateOneMoreTime;
             public RichTextDrawer RichTextDrawer;
 
-            public List<IEnumerator> Enumerators = new List<IEnumerator>();
+            public List<Waiter> Enumerators = new List<Waiter>();
+            public IVisualElementScheduledItem ButtonTask;
+            public bool WaiterHasError = false;
+            public bool WaiterHasFinished = false;
         }
 
-        private VisualElement _returnValueContainer;
-        private VisualElement _returnContainer;
+        // private VisualElement _returnValueContainer;
+        // private VisualElement _returnContainer;
 
-        private Button _buttonElement;
+        // private Button _buttonElement;
+
+
+        public override void OnDestroyUIToolkit()
+        {
+        }
 
         protected override (VisualElement target, bool needUpdate) CreateTargetUIToolkit(VisualElement inspectorRoot,
             VisualElement container)
         {
+            FancyButton fancyButton = new FancyButton
+            {
+                name = ButtonName(FieldWithInfo),
+            };
+
+            // return (fancyButton, true);
             container.style.flexGrow = 1;
+
             MethodInfo methodInfo = FieldWithInfo.MethodInfo;
             // Debug.Assert(methodInfo.GetParameters().All(p => p.IsOptional));
-            string buttonText = string.IsNullOrEmpty(_buttonAttribute.Label) || _buttonAttribute.IsCallback ? ObjectNames.NicifyVariableName(methodInfo.Name) : _buttonAttribute.Label;
+            string buttonText = string.IsNullOrEmpty(_buttonAttribute.Label)
+                                || _buttonAttribute.IsCallback ? ObjectNames.NicifyVariableName(methodInfo.Name) : _buttonAttribute.Label;
             // object[] defaultParams = methodInfo.GetParameters().Select(p => p.DefaultValue).ToArray();
             ParameterInfo[] parameters = methodInfo.GetParameters();
             bool hasParameters = parameters.Length > 0;
             // List<VisualElement> parameterElements = new List<VisualElement>();
             object[] parameterValues = new object[parameters.Length];
-            VisualElement root = null;
+            // VisualElement root = null;
 
             bool hasReturnValue = !_buttonAttribute.HideReturnValue
                 && methodInfo.ReturnType != typeof(void)
                 && !typeof(IEnumerator).IsAssignableFrom(methodInfo.ReturnType);
 
+            string buttonId = $"{FieldWithInfo.Targets[0].GetHashCode()}.{methodInfo.Name}";
+
             if (hasParameters || hasReturnValue)
             {
-                root = new VisualElement
-                {
-                    style =
-                    {
-                        backgroundColor = new Color(64f/255, 64f/255, 64f/255, 1f),
-                        borderTopWidth = 1,
-                        borderLeftWidth = 1,
-                        borderRightWidth = 1,
-                        borderBottomWidth = 1,
-                        borderLeftColor = EColor.MidnightAsh.GetColor(),
-                        borderRightColor = EColor.MidnightAsh.GetColor(),
-                        borderTopColor = EColor.MidnightAsh.GetColor(),
-                        borderBottomColor = EColor.MidnightAsh.GetColor(),
-                        borderTopLeftRadius = 3,
-                        borderTopRightRadius = 3,
-                        borderBottomLeftRadius = 3,
-                        borderBottomRightRadius = 3,
-                        marginTop = 1,
-                        marginBottom = 1,
-                        marginLeft = 3,
-                        marginRight = 3,
-                        paddingTop = 3,
-                    },
-                    name = "saintsfield-button-params",
-                };
+                VisualElement parametersContainer = fancyButton.HasParameters();
 
-                _ussClassSaintsFieldEditingDisabledHide ??= Util.LoadResource<StyleSheet>("UIToolkit/ClassSaintsFieldEditingDisabledHide.uss");
-                root.styleSheets.Add(_ussClassSaintsFieldEditingDisabledHide);
-
-                root.RegisterCallback<AttachToPanelEvent>(_ => UIToolkitUtils.LoopCheckOutOfScoopFoldout(root));
+                parametersContainer.RegisterCallback<AttachToPanelEvent>(_ => UIToolkitUtils.LoopCheckOutOfScoopFoldout(parametersContainer));
 
                 foreach ((ParameterInfo parameterInfo, int index) in parameters.WithIndex())
                 {
@@ -100,7 +93,7 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
                             marginRight = 4,
                         },
                     };
-                    root.Add(paraContainer);
+                    parametersContainer.Add(paraContainer);
 
                     Type paraType = parameterInfo.ParameterType;
                     object paraValue;
@@ -123,26 +116,26 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
                         {
                             return;
                         }
+                        // Debug.Log($"para value changed: {parameterInfo.Name}={parameterValues[index]}, {paraContainer.Children().FirstOrDefault()}");
                         VisualElement r = UIToolkitEdit.UIToolkitValueEdit(
                             paraContainer.Children().FirstOrDefault(),
                             parameterInfo.Name,
                             paraType,
-                            paraValue,
+                            parameterValues[index],
                             null,
                             newValue =>
                             {
-                                paraValue = parameterValues[index] = newValue;
+                                parameterValues[index] = newValue;
                                 paraValueChanged = true;
-                                if(_returnContainer != null && _returnContainer.style.display == DisplayStyle.Flex)
-                                {
-                                    _returnContainer.style.display = DisplayStyle.None;
-                                }
+                                fancyButton.ShowResult(false);
+                                // Debug.Log($"param {index} set to {newValue}");
                             },
                             false,
                             InAnyHorizontalLayout,
                             attributes,
                             FieldWithInfo.Targets,
-                            this
+                            this,
+                            $"{buttonId}.{parameterInfo.Name}"
                         ).result;
                         // ReSharper disable once InvertIf
                         if (r != null)
@@ -161,55 +154,78 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
                 Xml = buttonText,
                 Callback = _buttonAttribute.IsCallback ? _buttonAttribute.Label : "",
                 UpdateOneMoreTime = true,
-                Enumerators = new List<IEnumerator>(),
+                Enumerators = new List<Waiter>(),
+                WaiterHasError = false,
+                WaiterHasFinished = false,
+            };
+            fancyButton.userData = buttonUserData;
+
+            fancyButton.CloseButton.clicked += () =>
+            {
+                buttonUserData.ButtonTask?.Pause();
+
+                fancyButton.StatusIndicator.EnsureLoading(false, 0);
+                if (buttonUserData.Enumerators.Count > 0)
+                {
+                    fancyButton.StatusIndicator.PlayPause();
+                }
+                buttonUserData.Enumerators.Clear();
+                fancyButton.ShowResult(false);
             };
 
-            IVisualElementScheduledItem buttonTask = null;
-            Image buttonRotator = new Image
-            {
-                image = Util.LoadResource<Texture2D>("refresh.png"),
-                style =
-                {
-                    position = Position.Absolute,
-                    width = EditorGUIUtility.singleLineHeight - 2,
-                    height = EditorGUIUtility.singleLineHeight - 2,
-                    left = 1,
-                    top = 1,
-                    opacity = 0.5f,
-                    display = DisplayStyle.None,
-                },
-                tintColor = EColor.Lime.GetColor(),
-                // name = ButtonRotatorName(FieldWithInfo.MethodInfo, FieldWithInfo.Target),
-            };
-            UIToolkitUtils.KeepRotate(buttonRotator);
-            buttonRotator.schedule.Execute(() => UIToolkitUtils.TriggerRotate(buttonRotator)).StartingIn(200);
+            StatusIndicatorElement statusIndicatorElement = fancyButton.StatusIndicator;
 
             bool isStruct = ReflectUtils.TypeIsStruct(FieldWithInfo.Targets[0].GetType());
 
-            _buttonElement = new Button(() =>
+            fancyButton.MainButton.clicked += () =>
             {
+                fancyButton.ShowResult(false);
+
                 SaintsContext.SerializedProperty = _serializedProperty;
-                object[] returnValues = FieldWithInfo.Targets.Select(eachTarget =>
+                int targetCount = FieldWithInfo.Targets.Count;
+                object[] returnValues = new object[targetCount];
+                Exception error = null;
+                for (int index = 0; index < targetCount; index++)
                 {
+                    object eachTarget = FieldWithInfo.Targets[index];
                     (object rawMemberValue, object useTarget) = GetRefreshedTarget(FieldWithInfo, eachTarget);
 
-                    object result = methodInfo.Invoke(useTarget, parameterValues);
+                    object result;
+                    try
+                    {
+                        result = methodInfo.Invoke(useTarget, parameterValues);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+                        error = e;
+                        break;
+                    }
 
+                    returnValues[index] = result;
                     if (isStruct)
                     {
                         BackWriteCallback(rawMemberValue, useTarget);
                     }
+                }
 
-                    return result;
-                }).ToArray();
+                if (error != null)
+                {
+                    statusIndicatorElement.PlayError();
+                    VisualElement resultContainer = fancyButton.ShowResult(true);
+                    resultContainer.Clear();
+                    resultContainer.Add(MakeErrorBox(error));
+                    return;
+                }
 
                 if (hasReturnValue)
                 {
-                    Debug.Assert(_returnValueContainer != null);
-                    _returnValueContainer.Clear();
+                    // Debug.Assert(_returnValueContainer != null);
+                    VisualElement returnValueContainer = fancyButton.ShowResult(true);
+                    returnValueContainer.Clear();
                     object returnValue = returnValues[0];
                     VisualElement r = UIToolkitEdit.UIToolkitValueEdit(
-                        _returnValueContainer.Children().FirstOrDefault(),
+                        returnValueContainer.Children().FirstOrDefault(),
                         "<color=green>[return]</color>",
                         methodInfo.ReturnType,
                         returnValue,
@@ -219,7 +235,8 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
                         InAnyHorizontalLayout,
                         ReflectCache.GetCustomAttributes(FieldWithInfo.MethodInfo),
                         FieldWithInfo.Targets,
-                        this
+                        this,
+                        $"{buttonId}.[return]"
                     ).result;
                     if (r != null)
                     {
@@ -228,104 +245,140 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
                             fo.RegisterCallback<AttachToPanelEvent>(_ => fo.value = true);
                             // fo.value = true;
                         }
-                        if(_returnContainer.style.display != DisplayStyle.Flex)
-                        {
-                            _returnContainer.style.display = DisplayStyle.Flex;
-                        }
-                        _returnValueContainer.Add(r);
+
+                        fancyButton.ShowResult(true);
+                        // if (_returnContainer.style.display != DisplayStyle.Flex)
+                        // {
+                        //     _returnContainer.style.display = DisplayStyle.Flex;
+                        // }
+
+                        returnValueContainer.Add(r);
                     }
                 }
 
                 buttonUserData.Enumerators.Clear();
-                buttonUserData.Enumerators.AddRange(returnValues.OfType<IEnumerator>());
-                buttonTask?.Pause();
+                foreach (IEnumerator enumerator in returnValues.OfType<IEnumerator>())
+                {
+                    Waiter waiter = new Waiter(enumerator);
+                    buttonUserData.Enumerators.Add(waiter);
+                }
+
+                if (buttonUserData.Enumerators.Count == 0)
+                {
+                    statusIndicatorElement.PlayOk();
+                }
+                else
+                {
+                    statusIndicatorElement.PlayLoading();
+                    fancyButton.ShowCloseButton(true);
+                }
+
+                buttonUserData.ButtonTask?.Pause();
 
                 if (buttonUserData.Enumerators.Count > 0)
                 {
                     // ButtonUserData buttonUserData = (ButtonUserData) buttonElement.userData;
-                    buttonTask = _buttonElement.schedule.Execute(() =>
+                    buttonUserData.ButtonTask = fancyButton.schedule.Execute(() =>
                     {
-                        List<IEnumerator> finishedEnumerators = new List<IEnumerator>();
+                        List<Waiter> finishedEnumerators = new List<Waiter>();
+                        int oldCounter = buttonUserData.Enumerators.Count;
+                        float progress = -1f;
                         // ReSharper disable once ForeachCanBeConvertedToQueryUsingAnotherGetEnumerator
-                        foreach (IEnumerator bindEnumerator in buttonUserData.Enumerators)
+                        foreach (Waiter waiter in buttonUserData.Enumerators)
                         {
-                            if (!bindEnumerator.MoveNext())
+                            waiter.Update();
+
+                            if (!waiter.Done())
                             {
-                                finishedEnumerators.Add(bindEnumerator);
+                                if (waiter.Waitable != null)
+                                {
+                                    float curProcess = waiter.Waitable.Progress;
+                                    progress = Mathf.Max(progress, curProcess);
+                                }
+
+                                continue;
+                            }
+
+                            bool moveNext;
+                            bool thisHasMoveError = false;
+                            try
+                            {
+                                moveNext = waiter.Enumerator.MoveNext();
+                            }
+                            catch (Exception e)
+                            {
+                                Debug.LogException(e.InnerException ?? e);
+                                moveNext = false;
+                                thisHasMoveError = true;
+
+                                VisualElement result = fancyButton.ShowResult(true);
+                                // Debug.Log("show error result");
+                                result.Add(MakeErrorBox(e));
+                                buttonUserData.WaiterHasError = true;
+                            }
+
+                            if (thisHasMoveError)
+                            {
+                                waiter.Waitable = null;
+                            }
+                            else
+                            {
+                                waiter.CheckCurrent();
+                            }
+
+                            // Debug.Log(bindEnumerator.Current);
+                            // ReSharper disable once InvertIf
+                            if (!moveNext)
+                            {
+                                finishedEnumerators.Add(waiter);
+
+                                if(!thisHasMoveError)
+                                {
+                                    buttonUserData.WaiterHasFinished = true;
+                                }
                             }
                         }
 
                         buttonUserData.Enumerators.RemoveAll(each => finishedEnumerators.Contains(each));
 
                         bool stillHaveRunner = buttonUserData.Enumerators.Count > 0;
-                        DisplayStyle style = stillHaveRunner? DisplayStyle.Flex : DisplayStyle.None;
-                        if(buttonRotator.style.display != style)
-                        {
-                            buttonRotator.style.display = style;
-                        }
+                        statusIndicatorElement.EnsureLoading(stillHaveRunner, progress);
 
-                        if(!stillHaveRunner)
+                        // ReSharper disable once InvertIf
+                        if (!stillHaveRunner)
                         {
-                            // ReSharper disable once AccessToModifiedClosure
-                            // ReSharper disable once PossibleNullReferenceException
-                            buttonTask?.Pause();
+                            buttonUserData.ButtonTask?.Pause();
+
+                            // ReSharper disable once InvertIf
+                            if (oldCounter > 0)  // last ones finished
+                            {
+                                if (buttonUserData.WaiterHasError)
+                                {
+                                    if(buttonUserData.WaiterHasFinished)
+                                    {
+                                        statusIndicatorElement.PlayWarning();
+                                    }
+                                    else
+                                    {
+                                        statusIndicatorElement.PlayError();
+                                    }
+                                }
+                                else
+                                {
+                                    statusIndicatorElement.PlayOk();
+                                    fancyButton.ShowResult(false);
+                                }
+                            }
                         }
                     }).Every(1);
                 }
-
-                // ReSharper disable once InvertIf
-
-            })
-            {
-                text = "",
-                enableRichText = true,
-                style =
-                {
-                    flexGrow = 1,
-                    flexDirection = FlexDirection.Row,
-                    justifyContent = Justify.Center,
-                    position = Position.Relative,
-                },
-                name = ButtonName(FieldWithInfo.MethodInfo, FieldWithInfo.Targets[0]),
-                userData = buttonUserData,
             };
 
-            // if (!string.IsNullOrEmpty(buttonAttribute.Label))
-            // {
-            //     buttonElement.text = "";
-            //     buttonElement.Clear();
-            //     foreach (VisualElement element in (new RichTextDrawer()).DrawChunksUIToolKit(RichTextDrawer.ParseRichXml(buttonText,
-            //                  FieldWithInfo.MethodInfo.Name, FieldWithInfo.MethodInfo, FieldWithInfo.Target)))
-            //     {
-            //         buttonElement.Add(element);
-            //     }
-            // }
-
-            _buttonElement.Clear();
-            VisualElement buttonLabelContainer = new VisualElement
-            {
-                style =
-                {
-                    flexGrow = 1,
-                    flexDirection = FlexDirection.Row,
-                    justifyContent = Justify.Center,
-                    alignItems = Align.Center,
-                },
-                name = ButtonLabelContainerName(FieldWithInfo.MethodInfo, FieldWithInfo.Targets[0]),
-            };
-            _buttonElement.Add(buttonLabelContainer);
+            fancyButton.MainLabel.Clear();
             foreach (VisualElement element in new RichTextDrawer().DrawChunksUIToolKit(RichTextDrawer.ParseRichXmlWithProvider(buttonText, this)))
             {
-                buttonLabelContainer.Add(element);
+                fancyButton.MainLabel.Add(element);
             }
-
-            // buttonLabelContainer.RegisterCallback<AttachToPanelEvent>(_ =>
-            //     UIToolkitUtils.TriggerRotate(buttonLabelContainer));
-            // UIToolkitUtils.TriggerRotate(buttonLabelContainer);
-            // buttonRotator.transform.rotation = Quaternion.Euler(0, 0, 180);
-            // buttonRotator.AddToClassList("saints-rotate-360");
-
-            _buttonElement.Add(buttonRotator);
 
             bool needUpdate = _buttonAttribute.IsCallback;
 
@@ -342,50 +395,9 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
             string methodNameFriendly = ObjectNames.NicifyVariableName(methodInfo.Name);
 
             _onSearchFieldUIToolkit.AddListener(Search);
-            _buttonElement.RegisterCallback<DetachFromPanelEvent>(_ => _onSearchFieldUIToolkit.RemoveListener(Search));
+            fancyButton.RegisterCallback<DetachFromPanelEvent>(_ => _onSearchFieldUIToolkit.RemoveListener(Search));
 
-            if (!hasParameters && !hasReturnValue)
-            {
-                return (_buttonElement, needUpdate);
-            }
-            _buttonElement.style.marginTop = _buttonElement.style.marginBottom = _buttonElement.style.marginLeft = _buttonElement.style.marginRight = 0;
-            _buttonElement.style.borderTopLeftRadius = _buttonElement.style.borderTopRightRadius = 0;
-            _buttonElement.style.borderLeftWidth = _buttonElement.style.borderRightWidth = _buttonElement.style.borderBottomWidth = 0;
-            root.Add(_buttonElement);
-
-            // ReSharper disable once InvertIf
-            if(hasReturnValue)
-            {
-                _returnContainer = new VisualElement
-                {
-                    style =
-                    {
-                        display = DisplayStyle.None,
-                        marginRight = 4,
-                    },
-                };
-                _returnValueContainer = new VisualElement();
-                _returnContainer.Add(_returnValueContainer);
-
-                _returnContainer.Add(new Button(() =>
-                {
-                    _returnContainer.style.display = DisplayStyle.None;
-                })
-                {
-                    text = "x",
-                    style =
-                    {
-                        position = Position.Absolute,
-                        top = 0,
-                        right = -4,
-                    },
-                });
-
-                // returnValueContainer.SetEnabled(false);
-                root.Add(_returnContainer);
-            }
-
-            return (root, needUpdate);
+            return (fancyButton, needUpdate);
 
             void Search(string search)
             {
@@ -393,11 +405,32 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
                     ? DisplayStyle.Flex
                     : DisplayStyle.None;
 
-                if (_buttonElement.style.display != display)
+                if (fancyButton.style.display != display)
                 {
-                    _buttonElement.style.display = display;
+                    fancyButton.style.display = display;
                 }
             }
+        }
+
+        private static VisualElement MakeErrorBox(Exception error)
+        {
+            return new HelpBox(error.InnerException?.Message ?? error.Message, HelpBoxMessageType.Error)
+            {
+                style =
+                {
+                    borderLeftWidth = 0,
+                    borderRightWidth = 0,
+                    // borderTopWidth = 0,
+                    borderTopLeftRadius = 0,
+                    borderTopRightRadius = 0,
+                    borderBottomWidth = 0,
+                    backgroundColor = Color.clear,
+                    marginTop = 0,
+                    marginBottom = 0,
+                    marginLeft = 0,
+                    marginRight = 0,
+                },
+            };
         }
 
         // private RichTextDrawer _richTextDrawer;
@@ -408,18 +441,10 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
         {
             PreCheckResult baseResult = base.OnUpdateUIToolKit(root);
 
-            foreach (IPlayaMethodBindAttribute playaMethodBindAttribute in FieldWithInfo.PlayaAttributes.OfType<IPlayaMethodBindAttribute>())
-            {
-#if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_SAINTS_EDITOR_METHOD_RENDERER
-                Debug.Log($"button click {playaMethodBindAttribute}");
-#endif
-                CheckMethodBind(playaMethodBindAttribute, FieldWithInfo);
-            }
-
-            Button buttonElement;
+            FancyButton fancyButton;
             try
             {
-                buttonElement = root.Q<Button>(name: ButtonName(FieldWithInfo.MethodInfo, FieldWithInfo.Targets[0]));
+                fancyButton = root.Q<FancyButton>(name: ButtonName(FieldWithInfo));
             }
             catch (NullReferenceException)
             {
@@ -430,18 +455,18 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
                 return baseResult;
             }
 
-            if (buttonElement == null)
+            if (fancyButton == null)
             {
                 return baseResult;
             }
 
-            ButtonUserData buttonUserData = (ButtonUserData) buttonElement.userData;
+            ButtonUserData buttonUserData = (ButtonUserData) fancyButton.userData;
 
             string labelCallback = buttonUserData.Callback;
             // ReSharper disable once InvertIf
             if(!string.IsNullOrEmpty(labelCallback))
             {
-                (string error, string result) = Util.GetOf<string>(labelCallback, null,
+                (string error, MemberInfo _, string result) = Util.GetOf<string>(labelCallback, null,
                     FieldWithInfo.SerializedProperty, FieldWithInfo.MethodInfo, FieldWithInfo.Targets[0], null);
                 // Debug.Log($"{error}/{result}");
                 if (error != "")
@@ -479,7 +504,7 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
 
                 // buttonElement.text = "";
                 // buttonElement.Clear();
-                VisualElement buttonLabelContainer = root.Q<VisualElement>(name: ButtonLabelContainerName(FieldWithInfo.MethodInfo, FieldWithInfo.Targets[0]));
+                VisualElement buttonLabelContainer = fancyButton.MainLabel;
                 buttonLabelContainer.Clear();
 
                 // ReSharper disable once ConvertIfStatementToSwitchStatement

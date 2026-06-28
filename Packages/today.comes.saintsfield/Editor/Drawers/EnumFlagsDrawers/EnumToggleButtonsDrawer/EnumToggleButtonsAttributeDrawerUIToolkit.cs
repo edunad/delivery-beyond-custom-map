@@ -117,6 +117,9 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
         protected override void OnAwakeUIToolkit(SerializedProperty property, ISaintsAttribute saintsAttribute, int index,
             IReadOnlyList<PropertyAttribute> allAttributes, VisualElement container, Action<object> onValueChangedCallback, FieldInfo info, object parent)
         {
+            EnumToggleButtonsAttribute enumToggleButtonsAttribute = (EnumToggleButtonsAttribute)saintsAttribute;
+            bool noFold = enumToggleButtonsAttribute.NoFold;
+
             Type rawType = SerializedUtils.PropertyPathIndex(property.propertyPath) >= 0
                 ? ReflectUtils.GetElementType(info.FieldType)
                 : info.FieldType;
@@ -124,7 +127,7 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
             bool isFlags = Attribute.IsDefined(rawType, typeof(FlagsAttribute));
             if (!isFlags)
             {
-                ValueButtonsAttributeDrawer.UtilOnAwakeUIToolkit(this, property, saintsAttribute, container,
+                ValueButtonsAttributeDrawer.UtilOnAwakeUIToolkit(noFold, this, property, saintsAttribute, container,
                     onValueChangedCallback, info, parent);
                 return;
             }
@@ -184,28 +187,49 @@ namespace SaintsField.Editor.Drawers.EnumFlagsDrawers.EnumToggleButtonsDrawer
             VisualElement subPanel = container.Q<VisualElement>(name: ValueButtonsAttributeDrawer.NameSubPanel(property));
             LeftExpandButton leftExpandButton = container.Q<LeftExpandButton>(name: NameExpand(property));
             leftExpandButton.RegisterValueChangedCallback(evt =>
-                flagButtonFullToggleGroupElement.ToFullToggles(evt.newValue));
+            {
+                flagButtonsArrangeElement.SetGreedy(!evt.newValue);
+                flagButtonFullToggleGroupElement.ToFullToggles(evt.newValue);
+            });
             flagButtonFullToggleGroupElement.ToFullToggles(leftExpandButton.value);
 
             flagButtonsArrangeElement.BindSubContainer(subPanel);
+            flagButtonsArrangeElement.SetGreedy(!noFold && !leftExpandButton.value);
 
             flagButtonsArrangeElement.UpdateButtons(
                 rawInfos
             );
             RefreshCurValue();
 
+            bool autoFold = !noFold;
+            if (noFold)
+            {
+                flagButtonsArrangeElement.SetGreedy(false);
+                flagButtonFullToggleGroupElement.ToFullToggles(true);
+                subPanel.style.display = DisplayStyle.Flex;
+                leftExpandButton.style.display = DisplayStyle.None;
+            }
+
+
             flagButtonsArrangeElement.schedule.Execute(() =>
             {
-                leftExpandButton.RegisterValueChangedCallback(evt =>
-                    subPanel.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None);
+                if(autoFold)
+                {
+                    leftExpandButton.RegisterValueChangedCallback(evt =>
+                    {
+                        flagButtonsArrangeElement.SetGreedy(!evt.newValue);
+                        subPanel.style.display = evt.newValue ? DisplayStyle.Flex : DisplayStyle.None;
+                    });
+                }
+
                 flagButtonsArrangeElement.OnCalcArrangeDoneAddListener(hasSubRow =>
                 {
-                    subPanel.style.display = leftExpandButton.value ? DisplayStyle.Flex : DisplayStyle.None;
-                    // leftExpandButton.SetEnabled(hasSubRow);
-                    DisplayStyle display = hasSubRow ? DisplayStyle.Flex : DisplayStyle.None;
-                    if (leftExpandButton.style.display != display)
+                    if(autoFold)
                     {
-                        leftExpandButton.style.display = display;
+                        UIToolkitUtils.SetDisplayStyle(subPanel, leftExpandButton.value ? DisplayStyle.Flex : DisplayStyle.None);
+                        // leftExpandButton.SetEnabled(hasSubRow);
+                        DisplayStyle display = hasSubRow ? DisplayStyle.Flex : DisplayStyle.None;
+                        UIToolkitUtils.SetDisplayStyle(leftExpandButton, display);
                     }
                     RefreshCurValue();
                 });

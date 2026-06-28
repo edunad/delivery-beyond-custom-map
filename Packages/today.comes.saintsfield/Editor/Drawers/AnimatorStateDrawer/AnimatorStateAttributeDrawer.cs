@@ -5,6 +5,7 @@ using System.Reflection;
 using SaintsField.Editor.AutoRunner;
 using SaintsField.Editor.Core;
 using SaintsField.Editor.Utils;
+using SaintsField.Utils;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -21,10 +22,6 @@ namespace SaintsField.Editor.Drawers.AnimatorStateDrawer
     [CustomPropertyDrawer(typeof(AnimatorState), true)]
     public partial class AnimatorStateAttributeDrawer : SaintsPropertyDrawer, IAutoRunnerFixDrawer
     {
-        private bool _onEnableChecked;
-        private string _errorMsg = "";
-        // private bool _targetIsString = true;
-
         private struct MetaInfo
         {
             public RuntimeAnimatorController RuntimeAnimatorController;
@@ -37,7 +34,7 @@ namespace SaintsField.Editor.Drawers.AnimatorStateDrawer
             if (animatorName != null)
             {
                 // search parent first
-                (string error, object result) = Util.GetOf<object>(animatorName, null, property, info, parent, null);
+                (string error, MemberInfo _, object result) = Util.GetOf<object>(animatorName, null, property, info, parent, null);
                 if (error != "")
                 {
                     return (error, null);
@@ -46,9 +43,34 @@ namespace SaintsField.Editor.Drawers.AnimatorStateDrawer
                 switch (result)
                 {
                     case Animator animatorResult:
-                        return ("", animatorResult.runtimeAnimatorController);
+                    {
+                        if (RuntimeUtil.IsNull(animatorResult))
+                        {
+                            return ($"Animator {animatorName} is null.", null);
+                        }
+                        RuntimeAnimatorController controller;
+                        try
+                        {
+                            controller = animatorResult.runtimeAnimatorController;
+                        }
+                        catch (Exception e)
+                        {
+#if SAINTSFIELD_DEBUG
+                            Debug.LogWarning(e);
+#endif
+                            return ($"Failed to obtain animator controller: {e.Message}", null);
+                        }
+                        return ("", controller);
+                    }
                     case RuntimeAnimatorController controllerResult:
+                    {
+                        // ReSharper disable once ConvertIfStatementToReturnStatement
+                        if (RuntimeUtil.IsNull(controllerResult))
+                        {
+                            return ($"RuntimeAnimatorController {animatorName} is null.", null);
+                        }
                         return ("", controllerResult);
+                    }
                     default:
                         return ($"No Animator or RuntimeAnimatorController found in {animatorName}.", null);
                 }

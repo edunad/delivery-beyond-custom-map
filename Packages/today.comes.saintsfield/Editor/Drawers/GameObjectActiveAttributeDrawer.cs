@@ -4,6 +4,7 @@ using System.Reflection;
 using SaintsField.Editor.Core;
 using SaintsField.Editor.Utils;
 using SaintsField.Interfaces;
+using SaintsField.Utils;
 using UnityEditor;
 using UnityEngine;
 #if UNITY_2021_3_OR_NEWER
@@ -25,7 +26,7 @@ namespace SaintsField.Editor.Drawers
         private float _width = -1;
 
         protected override float GetPostFieldWidth(Rect position, SerializedProperty property, GUIContent label,
-            ISaintsAttribute saintsAttribute, int index, OnGUIPayload onGuiPayload, FieldInfo info, object parent)
+            ISaintsAttribute saintsAttribute, int index, FieldInfo info, object parent)
         {
             if (_width >= 0)
             {
@@ -33,7 +34,8 @@ namespace SaintsField.Editor.Drawers
             }
             // object target = property.serializedObject.targetObject;
             // string labelXml = GetButtonLabelXml((DecButtonAttribute)saintsAttribute, target, target.GetType());
-            float xmlWidth = RichTextDrawer.GetWidth(label, position.height, RichTextDrawer.ParseRichXml(UnSeeXml, "", property, info, parent));
+            float xmlWidth = RichTextDrawer.GetWidth(label, position.height,
+                RichTextDrawer.ParseRichXmlWithProvider(UnSeeXml, this));
             if (xmlWidth > 0)
             {
                 return _width = xmlWidth;
@@ -45,7 +47,7 @@ namespace SaintsField.Editor.Drawers
         protected override bool DrawPostFieldImGui(Rect position, Rect fullRect, SerializedProperty property,
             GUIContent label,
             ISaintsAttribute saintsAttribute, int index, IReadOnlyList<PropertyAttribute> allAttributes,
-            OnGUIPayload onGUIPayload, FieldInfo info, object parent)
+            FieldInfo info, object parent)
         {
             // error = "";
 
@@ -97,7 +99,7 @@ namespace SaintsField.Editor.Drawers
 
         protected override Rect DrawBelow(Rect position, SerializedProperty property, GUIContent label,
             ISaintsAttribute saintsAttribute, int index, IReadOnlyList<PropertyAttribute> allAttributes,
-            OnGUIPayload onGuiPayload, FieldInfo info, object parent) =>
+            FieldInfo info, object parent) =>
             error == ""
                 ? position
                 : ImGuiHelpBox.Draw(position, error, MessageType.Error);
@@ -141,7 +143,7 @@ namespace SaintsField.Editor.Drawers
             return ($"{property.propertyType} is not GameObject or Component", null);
         }
 
-#if UNITY_2021_3_OR_NEWER
+#if UNITY_2021_3_OR_NEWER && !SAINTSFIELD_UI_TOOLKIT_DISABLE
 
         #region UIToolkit
 

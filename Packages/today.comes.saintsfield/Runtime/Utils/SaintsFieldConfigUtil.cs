@@ -1,11 +1,12 @@
+#if UNITY_EDITOR
 
 using System;
 using UnityEditor;
 using UnityEngine.Events;
-#if UNITY_EDITOR
+
 using System.IO;
 using UnityEngine;
-#endif
+
 
 // ReSharper disable once CheckNamespace
 namespace SaintsField.Utils
@@ -162,5 +163,27 @@ namespace SaintsField.Utils
 
             return SaintsFieldConfig.MonoBehaviorSearchableDefault;
         }
+
+        public static bool GetMonoBehaviorRuntimeSave()
+        {
+            if (!EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                return false;
+            }
+
+            if (!IsConfigLoaded)
+            {
+                return SaintsFieldConfig.MonoBehaviorRuntimeSaveDefault;
+            }
+
+            // ReSharper disable once ConvertIfStatementToReturnStatement
+            if (Config.monoBehaviorRuntimeSaveOverride)
+            {
+                return Config.monoBehaviorRuntimeSave;
+            }
+
+            return SaintsFieldConfig.MonoBehaviorRuntimeSaveDefault;
+        }
     }
 }
+#endif

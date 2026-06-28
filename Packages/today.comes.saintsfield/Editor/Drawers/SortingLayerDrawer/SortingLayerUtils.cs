@@ -1,9 +1,6 @@
 using System;
 using System.Reflection;
 using SaintsField.Editor.Drawers.AdvancedDropdownDrawer;
-using SaintsField.Editor.Drawers.SceneDrawer;
-using SaintsField.Editor.Utils;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -33,36 +30,91 @@ namespace SaintsField.Editor.Drawers.SortingLayerDrawer
             showWithInitialExpansionMethod.Invoke(null, new object[] { layersEnumValue });
         }
 
-        public static void MakeDropdown(bool isString, object curValue, VisualElement root, Action<object> onValueChangedCallback)
+        private enum SortingLayerItemType
         {
-            AdvancedDropdownList<(string path, int index)> dropdown = new AdvancedDropdownList<(string path, int index)>();
-            if (isString)
+            None,
+            Normal,
+            EmptyString,
+            OpenEditor,
+        }
+
+        private readonly struct SortingLayerInfo: IEquatable<SortingLayerInfo>
+        {
+            public readonly string Name;
+            public readonly int Id;
+            public readonly SortingLayerItemType Type;
+
+            public SortingLayerInfo(int id, string name)
             {
-                dropdown.Add("[Empty String]", (string.Empty, -1));
-                dropdown.AddSeparator();
+                Name = name;
+                Id = id;
+                Type = SortingLayerItemType.Normal;
             }
 
-            string selectedName = null;
-            int selectedIndex = -1;
-            foreach (SortingLayer sortingLayer in SortingLayer.layers)
+            public SortingLayerInfo(SortingLayerItemType type, string name)
             {
-                // dropdown.Add(path, (path, index));
-                dropdown.Add(new AdvancedDropdownList<(string path, int index)>($"<color=#808080>{sortingLayer.value}</color> {sortingLayer.name}", (sortingLayer.name, sortingLayer.value)));
-                // ReSharper disable once InvertIf
-                if (isString && sortingLayer.name == (string)curValue
-                    || !isString && sortingLayer.value == (int)curValue)
+                Name = name;
+                Id = int.MinValue;
+                Type = type;
+            }
+
+            public bool Equals(SortingLayerInfo other)
+            {
+                return Id == other.Id && Type == other.Type;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is SortingLayerInfo other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(Id, (int)Type);
+            }
+        }
+
+#if UNITY_2021_2_OR_NEWER
+        public static void MakeDropdown(bool isString, object curValue, VisualElement root, Action<object> onValueChangedCallback)
+        {
+            Dropdown<SortingLayerInfo> dropdown = new Dropdown<SortingLayerInfo>();
+            if (isString)
+            {
+                dropdown.Add("[Empty String]", new SortingLayerInfo(SortingLayerItemType.EmptyString, ""));
+            }
+
+            // string selectedName = null;
+            // int selectedIndex = -1;
+            SortingLayerInfo selectedSortingLayer = default;
+            if(SortingLayer.layers.Length > 0)
+            {
+                dropdown.AddSeparator();
+
+                foreach (SortingLayer sortingLayer in SortingLayer.layers)
                 {
-                    selectedName = sortingLayer.name;
-                    selectedIndex = sortingLayer.value;
+                    SortingLayerInfo layerInfo = new SortingLayerInfo(sortingLayer.id, sortingLayer.name);
+                    dropdown.Add(new Dropdown<SortingLayerInfo>(
+                        $"{sortingLayer.name} <color=#808080>{sortingLayer.id}</color>",
+                        layerInfo));
+                    // ReSharper disable once InvertIf
+                    if (isString && sortingLayer.name == (string)curValue
+                        || !isString && sortingLayer.id == (int)curValue)
+                    {
+                        selectedSortingLayer = layerInfo;
+                    }
                 }
             }
 
-            dropdown.AddSeparator();
-            dropdown.Add("Edit Sorting Layers", ("", -2), false, "d_editicon.sml");
+            if(SortingLayer.layers.Length > 0)
+            {
+                dropdown.AddSeparator();
+            }
+
+            dropdown.Add("Edit Sorting Layers", new SortingLayerInfo(SortingLayerItemType.OpenEditor, null), false, "d_editicon.sml");
 
             AdvancedDropdownMetaInfo metaInfo = new AdvancedDropdownMetaInfo
             {
-                CurValues = selectedIndex >= 0 ? new object[] { (selectedName, selectedIndex) } : Array.Empty<object>(),
+                CurValues = new []{(object)selectedSortingLayer},
                 DropdownListValue = dropdown,
                 SelectStacks = Array.Empty<AdvancedDropdownAttributeDrawer.SelectStack>(),
             };
@@ -76,37 +128,41 @@ namespace SaintsField.Editor.Drawers.SortingLayerDrawer
                 false,
                 (_, curItem) =>
                 {
-                    (string path, int index) = ((string path, int index))curItem;
-                    switch (index)
+                    SortingLayerInfo curInfo = (SortingLayerInfo)curItem;
+                    switch (curInfo.Type)
                     {
-                        case -1:
+                        case SortingLayerItemType.Normal:
+                        {
+                            if (isString)
+                            {
+                                onValueChangedCallback.Invoke(curInfo.Name);
+                            }
+                            else
+                            {
+                                onValueChangedCallback.Invoke(curInfo.Id);
+                            }
+                        }
+                            break;
+                        case SortingLayerItemType.EmptyString:
                         {
                             Debug.Assert(isString);
                             onValueChangedCallback.Invoke("");
                         }
                             break;
-                        case -2:
+                        case SortingLayerItemType.OpenEditor:
                         {
                             OpenSortingLayerInspector();
                         }
                             break;
+                        case SortingLayerItemType.None:
                         default:
-                        {
-                            if (isString)
-                            {
-                                onValueChangedCallback.Invoke(path);
-                            }
-                            else
-                            {
-                                onValueChangedCallback.Invoke(index);
-                            }
-                        }
-                            break;
+                            throw new ArgumentOutOfRangeException(nameof(curInfo), curInfo.Type, null);
                     }
                 }
             );
 
             UnityEditor.PopupWindow.Show(worldBound, sa);
         }
+#endif
     }
 }

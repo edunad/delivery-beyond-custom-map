@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using SaintsField.Editor.Playa.Renderer;
 using SaintsField.Editor.Playa.Renderer.EmptyFakeRenderer;
-#if DOTWEEN && !SAINTSFIELD_DOTWEEN_DISABLED
+#if DOTWEEN && SAINTSFIELD_DOTWEEN_ENABLE
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -14,11 +14,15 @@ using UnityEngine;
 // ReSharper disable once EmptyNamespace
 namespace SaintsField.Editor.Playa.RendererGroup
 {
-#if DOTWEEN && !SAINTSFIELD_DOTWEEN_DISABLED
+#if DOTWEEN && SAINTSFIELD_DOTWEEN_ENABLE
     // ReSharper disable once InconsistentNaming
     public partial class DOTweenPlayGroup: ISaintsRendererGroup
     {
         public bool InDirectHorizontalLayout { get; set; }
+        public void RefreshTargets(object[] targets)
+        {
+        }
+
         public bool InAnyHorizontalLayout { get; set; }
         // public bool NoLabel { get; set; }
 

@@ -142,7 +142,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
             }
             else
             {
-                (string getError, object getValue) =
+                (string getError, MemberInfo _, object getValue) =
                     Util.GetOf<object>(propRangeAttribute.MinCallback, 0, property, info, parentTarget, null);
                 if (getError != "")
                 {
@@ -158,7 +158,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
             }
             else
             {
-                (string getError, object getValue) =
+                (string getError, MemberInfo _, object getValue) =
                     Util.GetOf<object>(propRangeAttribute.MaxCallback, 0f, property, info, parentTarget, null);
                 if (getError != "")
                 {
@@ -529,7 +529,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -577,7 +577,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -625,7 +625,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -673,7 +673,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -721,7 +721,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -764,7 +764,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
             // Debug.Log($"init {value}");
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -807,7 +807,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
             // Debug.Log($"init {value}");
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -850,7 +850,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
             // Debug.Log($"init {value}");
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -892,7 +892,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)
@@ -934,7 +934,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
 
             field.value = value;
 
-            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull,
+            UIToolkitUtils.UIToolkitValueEditAfterProcess(field, setterOrNull != null,
                 labelGrayColor, inHorizontalLayout);
 
             if (setterOrNull != null)

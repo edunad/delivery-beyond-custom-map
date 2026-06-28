@@ -1,3 +1,4 @@
+#if UNITY_2021_3_OR_NEWER
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ using SaintsField.Editor.Linq;
 using SaintsField.Editor.UIToolkitElements;
 using SaintsField.Editor.Utils;
 using SaintsField.Interfaces;
+using SaintsField.Playa;
 using SaintsField.Utils;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -15,7 +17,6 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
-#if UNITY_2022_2_OR_NEWER
 namespace SaintsField.Editor.Drawers.SaintsHashSetTypeDrawer
 {
     public partial class SaintsHashSetDrawer
@@ -283,52 +284,6 @@ namespace SaintsField.Editor.Drawers.SaintsHashSetTypeDrawer
             return root;
         }
 
-        private static (FieldInfo targetInfo, object targetParent) GetTargetInfo(string propNameCompact, Type type, object saintsSerValue)
-        {
-
-            // object keysIterTarget = info.GetValue(parent);
-            object keysIterTarget = saintsSerValue;
-            List<object> keysParents = new List<object>(3)
-            {
-                saintsSerValue,
-            };
-            Type keysParentType = type;
-            FieldInfo keysField = null;
-            // Debug.Log($"propKeysNameCompact={propNameCompact}");
-            foreach (string propKeysName in propNameCompact.Split('.'))
-            {
-                // Debug.Log($"propKeysName={propKeysName}");
-
-                // ReSharper disable once ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
-                foreach (Type each in ReflectUtils.GetSelfAndBaseTypesFromType(keysParentType))
-                {
-                    FieldInfo field = each.GetField(propKeysName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
-                    if (field == null)
-                    {
-                        continue;
-                    }
-
-                    // Debug.Log($"field={field}; keysField={keysField}");
-
-                    keysField = field;
-                    keysParentType = keysField.FieldType;
-                    keysIterTarget = keysField.GetValue(keysIterTarget);
-                    keysParents.Add(keysIterTarget);
-                    // Debug.Log($"Prop {propKeysName} Add parents = {keysIterTarget}/{keysIterTarget.GetType()}");
-                    // Debug.Log($"set keysField={keysField}/keysParentType={keysParentType}/keysIterTarget={keysIterTarget}");
-                    break;
-                }
-
-                Debug.Assert(keysField != null, $"Failed to get key {propKeysName} from {keysIterTarget}");
-            }
-
-            int keysParentsCount = keysParents.Count;
-
-            object keysParent = keysParentsCount >= 2? keysParents[keysParentsCount - 2]: keysParents[0];
-
-            return (keysField, keysParent);
-        }
-
         private class AsyncSearchItems
         {
             public bool Started;
@@ -350,20 +305,12 @@ namespace SaintsField.Editor.Drawers.SaintsHashSetTypeDrawer
 
         private AsyncSearchItems _asyncSearchItems;
 
-        private const float DebounceTime = 0.6f;
-
         protected override void OnAwakeUIToolkit(SerializedProperty property, ISaintsAttribute saintsAttribute, int index,
             IReadOnlyList<PropertyAttribute> allAttributes, VisualElement container, Action<object> onValueChangedCallback, FieldInfo info, object parent)
         {
-            SerializedProperty propVersion = property.FindPropertyRelative("_saintsSerializedVersion");
-            if (propVersion.intValue != 1)
-            {
-                propVersion.intValue = 1;
-                propVersion.serializedObject.ApplyModifiedProperties();
-            }
+            EnsureSerializedVersion(property);
 
             SaintsHashSetAttribute saintsHashSetAttribute = saintsAttribute as SaintsHashSetAttribute;
-
             int arrayIndex = SerializedUtils.PropertyPathIndex(property.propertyPath);
             bool insideArray = arrayIndex != -1;
 
@@ -615,7 +562,7 @@ namespace SaintsField.Editor.Drawers.SaintsHashSetTypeDrawer
                 searchTextField.style.position = Position.Relative;
 
                 searchTextField.Add(loadingImage);
-                UIToolkitUtils.KeepRotate(loadingImage);
+                UIToolkitUtils.SetKeepRotate(loadingImage);
                 loadingImage.RegisterCallback<AttachToPanelEvent>(_ => loadingImage.schedule.Execute(() => UIToolkitUtils.TriggerRotate(loadingImage)));
                 // _asyncSearchItems.LoadingImage = loadingImage;
 
@@ -648,12 +595,19 @@ namespace SaintsField.Editor.Drawers.SaintsHashSetTypeDrawer
 
             listView.makeItem = () => new VisualElement();
 
-            bool needUseRef = typeof(ReferenceHashSet<>).IsAssignableFrom(rawType.GetGenericTypeDefinition());
-            IReadOnlyList<Attribute> injectedKeyAttributes = needUseRef
-                ? new[]{new SerializeReference()}
-                : Array.Empty<Attribute>();
+            List<InjectAttributeBase> injectAttributes = new List<InjectAttributeBase>();
+            bool hasSerializeReference = UsesReferenceWrap(rawType);
+            foreach (InjectAttributeBase injectAttribute in ReflectCache.GetCustomAttributes<InjectAttributeBase>(info))
+            {
+                if (injectAttribute.Decorator == typeof(SerializeReference))
+                {
+                    hasSerializeReference = true;
+                    continue;
+                }
+                injectAttributes.Add(new ValueAttributeAttribute(injectAttribute.Depth, injectAttribute.Decorator, injectAttribute.Parameters));
+            }
 
-            WrapType keyWrapType = SaintsWrapUtils.EnsureWrapType(property.FindPropertyRelative("_wrapType"), wrapField, injectedKeyAttributes);
+            WrapType keyWrapType = SaintsWrapUtils.EnsureWrapType(property.FindPropertyRelative("_wrapType"), wrapField, hasSerializeReference);
 
             listView.bindItem = (element, elementIndex) =>
             {
@@ -672,12 +626,21 @@ namespace SaintsField.Editor.Drawers.SaintsHashSetTypeDrawer
                 // };
                 // element.Add(wrapContainer);
 
+                // Debug.Log($"render item {elementProp.propertyPath}/keyWrapType={keyWrapType}/wrapField={wrapField}/wrapType={wrapType}");
+
                 VisualElement resultElement =
                     SaintsWrapUtils.CreateCellElement(
                         keyWrapType,
                         wrapField,
                         wrapType,
-                        elementProp, injectedKeyAttributes, this, this, wrapParent
+                        elementProp,
+                        ReflectCache
+                            .GetCustomAttributes<Attribute>(info)
+                            .Where(each => each is not SaintsHashSetAttribute)
+                            .Where(each => each is PropertyAttribute or InjectAttributeBase)
+                            .ToArray(),
+                        injectAttributes,
+                        hasSerializeReference, this, this, this, wrapParent
                     );
                 ElementField elementField = new ElementField($"Element {propIndex}", resultElement);
                 element.Add(elementField);

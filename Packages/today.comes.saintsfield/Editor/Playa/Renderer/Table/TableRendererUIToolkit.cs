@@ -1,20 +1,13 @@
-#if UNITY_2021_3_OR_NEWER //&& !SAINTSFIELD_UI_TOOLKIT_DISABLE
-using System;
+#if UNITY_2021_3_OR_NEWER
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using SaintsField.Editor.Core;
-using SaintsField.Editor.Drawers.SaintsRowDrawer;
-using SaintsField.Editor.Playa.Renderer.BaseRenderer;
 using SaintsField.Editor.UIToolkitElements;
 using SaintsField.Editor.Utils;
-using SaintsField.Playa;
-using SaintsField.Utils;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
-using Object = UnityEngine.Object;
 
 namespace SaintsField.Editor.Playa.Renderer.Table
 {
@@ -45,6 +38,7 @@ namespace SaintsField.Editor.Playa.Renderer.Table
             OnSearchFieldUIToolkit.AddListener(Search);
             result.RegisterCallback<DetachFromPanelEvent>(_ => OnSearchFieldUIToolkit.RemoveListener(Search));
             result.AddToClassList(SaintsPropertyDrawer.ClassLabelFieldUIToolkit);
+
 
             return (result, true);
 
@@ -78,6 +72,8 @@ namespace SaintsField.Editor.Playa.Renderer.Table
                     // marginRight = 54,
                 },
             };
+
+            UIToolkitUtils.AddContextualMenuManipulator(foldout, arrayProp, () => {});
             root.Add(foldout);
 
             IntegerField arraySizeField = new IntegerField
@@ -120,6 +116,7 @@ namespace SaintsField.Editor.Playa.Renderer.Table
 
             TableContentElement tableContentElement = new TableContentElement(FieldWithInfo);
             foldout.Add(tableContentElement);
+            // tableContentElement.AddToClassList("unity-collection-view--with-border");
 
             arraySizeField.RegisterValueChangedCallback(evt =>
             {
@@ -193,6 +190,7 @@ namespace SaintsField.Editor.Playa.Renderer.Table
             if (tableAttribute.HideAddButton && tableAttribute.HideRemoveButton)
             {
                 arraySizeField.SetEnabled(false);
+                listViewFooter.style.display = DisplayStyle.None;
             }
 
             // controls.Add(toolbar);
@@ -221,46 +219,8 @@ namespace SaintsField.Editor.Playa.Renderer.Table
             foldout.Add(listViewFooter);
         }
 
-        private static int ChangeArraySize(int newValue, SerializedProperty arrayProp)
+        public override void OnDestroyUIToolkit()
         {
-            int oldValue = arrayProp.arraySize;
-            if (newValue == oldValue)
-            {
-                return oldValue;
-            }
-
-            arrayProp.arraySize = newValue;
-
-            if (newValue > oldValue)  // add
-            {
-                if (arrayProp.GetArrayElementAtIndex(0).propertyType == SerializedPropertyType.ObjectReference)
-
-                {
-                    foreach (int index in Enumerable.Range(oldValue, newValue - oldValue))
-                    {
-                        arrayProp.GetArrayElementAtIndex(index).objectReferenceValue = null;
-                    }
-                }
-            }
-
-            arrayProp.serializedObject.ApplyModifiedProperties();
-            return newValue;
-        }
-
-        private static void DeleteArrayElement(SerializedProperty arrayProp, IEnumerable<int> selectedIndices)
-        {
-            List<int> indexes = selectedIndices.OrderByDescending(each => each).Where(each => each < arrayProp.arraySize).ToList();
-            if (indexes.Count == 0)
-            {
-                indexes.Add(arrayProp.arraySize - 1);
-            }
-
-            foreach (int index in indexes)
-            {
-                arrayProp.DeleteArrayElementAtIndex(index);
-            }
-
-            arrayProp.serializedObject.ApplyModifiedProperties();
         }
     }
 }

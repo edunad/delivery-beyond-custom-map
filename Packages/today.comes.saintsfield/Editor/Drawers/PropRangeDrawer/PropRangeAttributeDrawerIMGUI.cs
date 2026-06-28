@@ -37,7 +37,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
         }
 
         protected override void DrawField(Rect position, SerializedProperty property, GUIContent label,
-            ISaintsAttribute saintsAttribute, IReadOnlyList<PropertyAttribute> allAttributes, OnGUIPayload onGUIPayload,
+            ISaintsAttribute saintsAttribute, IReadOnlyList<PropertyAttribute> allAttributes,
             FieldInfo info, object parentTarget)
         {
 #if SAINTSFIELD_DEBUG && SAINTSFIELD_DEBUG_DRAW_PROCESS
@@ -50,7 +50,8 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
             if (metaInfo.Error != "")
             {
                 cacheInfo.Error = metaInfo.Error;
-                DefaultDrawer(position, property, label, info);
+                RawDefaultDrawer(position, property, allAttributes, label, info);
+                DrawOverrideRichText(position, label, overrideRichTextChunks);
                 return;
             }
 
@@ -65,7 +66,8 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
                 if (curValueInfo.error != "")
                 {
                     metaInfo.Error = curValueInfo.error;
-                    DefaultDrawer(position, property, label, info);
+                    RawDefaultDrawer(position, property, allAttributes, label, info);
+                    DrawOverrideRichText(position, label, overrideRichTextChunks);
                     return;
                 }
                 float curValue = (float)curValueInfo.value;
@@ -76,7 +78,8 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
                 if (minValueInfo.error != "")
                 {
                     metaInfo.Error = minValueInfo.error;
-                    DefaultDrawer(position, property, label, info);
+                    RawDefaultDrawer(position, property, allAttributes, label, info);
+                    DrawOverrideRichText(position, label, overrideRichTextChunks);
                     return;
                 }
                 float minValue = (float)minValueInfo.value;
@@ -85,7 +88,8 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
                 if (maxValueInfo.error != "")
                 {
                     metaInfo.Error = maxValueInfo.error;
-                    DefaultDrawer(position, property, label, info);
+                    RawDefaultDrawer(position, property, allAttributes, label, info);
+                    DrawOverrideRichText(position, label, overrideRichTextChunks);
                     return;
                 }
                 float maxValue = (float)maxValueInfo.value;
@@ -94,6 +98,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
                 Debug.Log($"#PropRange# #DrawField# for {property.propertyPath}: {minValue}~{maxValue} {curValue}");
 #endif
                 float adaptedValue = EditorGUI.Slider(position, label, curValue, minValue, maxValue);
+                DrawOverrideRichText(position, label, overrideRichTextChunks);
                 (string error, double value) postValueInfo = GetPostValue(adaptedValue, adaptAttribute);
                 if (postValueInfo.error != "")
                 {
@@ -117,12 +122,12 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
                     if (isFloat)
                     {
                         property.doubleValue = parsedValue;
-                        onGUIPayload.SetValue(parsedValue);
+                        TriggerChangedIMGUI(property, parsedValue);
                     }
                     else
                     {
                         property.intValue = (int)parsedValue;
-                        onGUIPayload.SetValue((int)parsedValue);
+                        TriggerChangedIMGUI(property, (int)parsedValue);
                     }
                 }
             }
@@ -149,7 +154,7 @@ namespace SaintsField.Editor.Drawers.PropRangeDrawer
 
         protected override Rect DrawBelow(Rect position, SerializedProperty property, GUIContent label,
             ISaintsAttribute saintsAttribute, int index, IReadOnlyList<PropertyAttribute> allAttributes,
-            OnGUIPayload onGuiPayload, FieldInfo info, object parent)
+            FieldInfo info, object parent)
         {
             string error = EnsureKey(property).Error;
             return error == "" ? position : ImGuiHelpBox.Draw(position, error, MessageType.Error);

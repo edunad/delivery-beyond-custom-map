@@ -1,4 +1,4 @@
-﻿#if UNITY_2021_3_OR_NEWER
+#if UNITY_2021_3_OR_NEWER
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -100,7 +100,7 @@ namespace SaintsField.Editor.Drawers.XPathDrawers.GetByXPathDrawer
             Texture2D pickerImage = EditorGUIUtility.IconContent("d_pick_uielements").image as Texture2D;
             Button selectorButton = new Button
             {
-                // text = "●",
+                // text = "��",
                 style =
                 {
                     width = SingleLineHeight,

@@ -1,7 +1,8 @@
-#if UNITY_2021_3_OR_NEWER
+#if UNITY_2021_3_OR_NEWER && !SAINTSFIELD_UI_TOOLKIT_DISABLE
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using SaintsField.Editor.Core;
 using SaintsField.Editor.Utils;
 using SaintsField.Interfaces;
 using UnityEditor;
@@ -13,6 +14,7 @@ namespace SaintsField.Editor.Drawers.MinValueDrawer
 {
     public partial class MinValueAttributeDrawer
     {
+
         private static string NameHelpBox(SerializedProperty property, int index) =>
             $"{property.propertyPath}_{index}__MinValue_HelpBox";
 
@@ -29,8 +31,8 @@ namespace SaintsField.Editor.Drawers.MinValueDrawer
                     display = DisplayStyle.None,
                 },
             };
-            helpBox.AddToClassList(ClassAllowDisable);
 
+            helpBox.AddToClassList(ClassAllowDisable);
             return helpBox;
         }
 
@@ -40,37 +42,31 @@ namespace SaintsField.Editor.Drawers.MinValueDrawer
             HelpBox helpBox = container.Q<HelpBox>(NameHelpBox(property, index));
             MinValueAttribute minValueAttribute = (MinValueAttribute)saintsAttribute;
 
-            TrackValue(property, minValueAttribute, helpBox, onValueChangedCallback, info, parent);
-            helpBox.TrackPropertyValue(property, _ => TrackValue(property, minValueAttribute, helpBox, onValueChangedCallback, info, parent));
-            helpBox.RegisterCallback<DetachFromPanelEvent>(_ => UIToolkitUtils.Unbind(helpBox));
-        }
-
-        private static void TrackValue(SerializedProperty property, MinValueAttribute minValueAttribute,
-            HelpBox helpBox, Action<object> onValueChangedCallback, FieldInfo info, object parent)
-        {
-            (string error, float valueLimit) = GetLimitFloat(property, minValueAttribute, info, parent);
-
-            UIToolkitUtils.SetHelpBox(helpBox, error);
-
-            if (error != "")
+            Refresh();
+            helpBox.TrackPropertyValue(property, _ => Refresh());
+            SaintsEditorApplicationChanged.OnAnyEvent.AddListener(Refresh);
+            helpBox.RegisterCallback<DetachFromPanelEvent>(_ =>
             {
-                return;
-            }
+                SaintsEditorApplicationChanged.OnAnyEvent.RemoveListener(Refresh);
+                UIToolkitUtils.Unbind(helpBox);
+            });
+            return;
 
-            if (property.propertyType == SerializedPropertyType.Float && property.floatValue < valueLimit)
+            void Refresh()
             {
-                property.floatValue = valueLimit;
-                property.serializedObject.ApplyModifiedProperties();
-                onValueChangedCallback.Invoke(valueLimit);
-            }
-            else if (property.propertyType == SerializedPropertyType.Integer && property.intValue < (int)valueLimit)
-            {
-                property.intValue = (int)valueLimit;
-                property.serializedObject.ApplyModifiedProperties();
-                onValueChangedCallback.Invoke((int)valueLimit);
+                if (!SerializedUtils.IsOk(property))
+                {
+                    return;
+                }
+
+                (IReadOnlyList<string> errors, IReadOnlyList<(string message, Action fix)> checkerResults) = CheckPropertyValue(property, minValueAttribute, onValueChangedCallback, info, parent);
+                foreach ((string _, Action fix)  in checkerResults)
+                {
+                    helpBox.schedule.Execute(fix);
+                }
+                UIToolkitUtils.SetHelpBox(helpBox, string.Join("\n", errors));
             }
         }
-
     }
 }
 #endif

@@ -1,3 +1,4 @@
+#if UNITY_2021_3_OR_NEWER
 using System.Collections.Generic;
 using System.Linq;
 using SaintsField.Editor.Core;
@@ -170,3 +171,4 @@ namespace SaintsField.Editor.Drawers.AnimatorStateDrawer
         }
     }
 }
+#endif

@@ -11,9 +11,9 @@ namespace SaintsField.Editor.Utils
 {
     public class SaintsFieldSetupWindow: SaintsEditorWindow
     {
-#if SAINTSFIELD_DEBUG
-        [MenuItem("Saints/SaintsField Setup")]
-#endif
+// #if SAINTSFIELD_DEBUG
+//         [MenuItem(RuntimeUtil.MenuRoot + "/SaintsField Setup")]
+// #endif
         public static void Open()
         {
             GetWindow<SaintsFieldSetupWindow>("SaintsField Setup").Show();
@@ -136,7 +136,7 @@ namespace SaintsField.Editor.Utils
 
 #if UNITY_6000_0_OR_NEWER && !SAINTSFIELD_SAINTS_EDITOR_APPLY
         [Separator(5)]
-        [InfoBox("<size+1>If you're using <b>custom \"Build Profile\"</b> with custom \"Player Settings\", please add `SAINTSFIELD_SAINTS_EDITOR_APPLY` in \"Scripting Define Symbols\" manually", EMessageType.Warning)]
+        [InfoBox("<size=+1>If you're using <b>custom \"Build Profile\"</b> with custom \"Player Settings\", please add `SAINTSFIELD_SAINTS_EDITOR_APPLY` in \"Scripting Define Symbols\" manually", EMessageType.Warning)]
 #endif
 
         [InfoBox("Loading, please wait...", show: nameof(_loadingSaintsEditor))]
@@ -262,6 +262,67 @@ namespace SaintsField.Editor.Utils
                 yield return null;
             }
         }
+
+        #endregion
+
+        #region Debug
+
+#if SAINTSFIELD_DEBUG
+
+        [LayoutStart("Debug", ELayout.FoldoutBox)]
+#if !SAINTSFIELD_UNITY_MATHEMATICS
+        [Button("Install com.unity.mathematics")]
+        private IEnumerator InstallComUnityMathematics() => DebugInstall("com.unity.mathematics");
+#else
+        [Button("Remove com.unity.mathematics")]
+        private IEnumerator RemoveComUnityMathematics() => DebugRemove("com.unity.mathematics");
+#endif
+
+#if !SAINTSFIELD_ADDRESSABLE
+        [Button("Install com.unity.addressables")]
+        private IEnumerator InstallComAddressables() => DebugInstall("com.unity.addressables");
+#else
+        [Button("Remove com.unity.addressables")]
+        private IEnumerator RemoveComAddressables() => DebugRemove("com.unity.addressables");
+#endif
+
+#if !SAINTSFIELD_NETCODE_GAMEOBJECTS
+        [Button("Install com.unity.netcode.gameobjects")]
+        private IEnumerator InstallComNetCode() => DebugInstall("com.unity.netcode.gameobjects");
+#else
+        [Button("Remove com.unity.netcode.gameobjects")]
+        private IEnumerator RemoveComNetcode() => DebugRemove("com.unity.netcode.gameobjects");
+#endif
+
+        private static IEnumerator DebugInstall(string packageName)
+        {
+            return DebugRequest(Client.Add(packageName));
+        }
+        private static IEnumerator DebugRemove(string packageName)
+        {
+            return DebugRequest(Client.Remove(packageName));
+        }
+
+        private static IEnumerator DebugRequest(Request request)
+        {
+            while (true)
+            {
+                switch (request.Status)
+                {
+                    case StatusCode.InProgress:
+                        yield return null;
+                        break;
+                    case StatusCode.Success:
+                        yield break;
+                    case StatusCode.Failure:
+                        throw new Exception(request.Error.message);
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+        }
+
+#endif
 
         #endregion
     }

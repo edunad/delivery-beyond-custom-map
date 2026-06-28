@@ -1,4 +1,4 @@
-#if UNITY_2021_3_OR_NEWER //&& !SAINTSFIELD_UI_TOOLKIT_DISABLE
+#if UNITY_2021_3_OR_NEWER
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -32,6 +32,10 @@ namespace SaintsField.Editor.Playa.Renderer.RealTimeCalculatorFakeRenderer
             public bool IsGeneralCollection;
             public IReadOnlyList<object> OldCollection;
             public bool AlwaysCheckUpdate;
+        }
+
+        public override void OnDestroyUIToolkit()
+        {
         }
 
         protected override (VisualElement target, bool needUpdate) CreateTargetUIToolkit(VisualElement inspectorRoot,
@@ -94,6 +98,8 @@ namespace SaintsField.Editor.Playa.Renderer.RealTimeCalculatorFakeRenderer
 
             root.RegisterCallback<AttachToPanelEvent>(_ => UIToolkitUtils.LoopCheckOutOfScoopFoldout(root));
 
+            string targetId = $"{FieldWithInfo.Targets[0].GetHashCode()}.{methodInfo.Name}";
+
             if (hasParameters)
             {
                 _ussClassSaintsFieldEditingDisabledHide ??= Util.LoadResource<StyleSheet>("UIToolkit/ClassSaintsFieldEditingDisabledHide.uss");
@@ -146,7 +152,8 @@ namespace SaintsField.Editor.Playa.Renderer.RealTimeCalculatorFakeRenderer
                             InAnyHorizontalLayout,
                             attributes,
                             FieldWithInfo.Targets,
-                            this
+                            this,
+                            $"{targetId}.{parameterInfo.Name}"
                         ).result;
                         // ReSharper disable once InvertIf
                         if (r != null)
@@ -300,6 +307,7 @@ namespace SaintsField.Editor.Playa.Renderer.RealTimeCalculatorFakeRenderer
                 }
 
                 Type type = RuntimeUtil.IsNull(value) ? methodInfo.ReturnType : value.GetType();
+                string targetId = $"{FieldWithInfo.Targets[0].GetHashCode()}.{methodInfo.Name}.{type.FullName}";
                 (VisualElement result, bool isNestedField) = UIToolkitEdit.UIToolkitValueEdit(
                     fieldElementOrNull,
                     NoLabel? null: GetName(FieldWithInfo),
@@ -311,7 +319,8 @@ namespace SaintsField.Editor.Playa.Renderer.RealTimeCalculatorFakeRenderer
                     InAnyHorizontalLayout,
                     ReflectCache.GetCustomAttributes(FieldWithInfo.MethodInfo),
                     FieldWithInfo.Targets,
-                    this);
+                    this,
+                    targetId);
                 // Debug.Log($"fill value {value} get {result}");
                 if(result!=null)
                 {
