@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: cea0495378ea46a4f8a886aaf179a1cf
+timeCreated: 1746190820
+AssetOrigin:
+  serializedVersion: 1
+  productId: 269741
+  packageName: Saints Field
+  packageVersion: 5.22.0
+  assetPath: Packages/today.comes.saintsfield/Editor/Drawers/FieldReadOnlyAttributeDrawer/FieldReadOnlyAttributeDrawerIMGUI.cs
+  uploadId: 948554

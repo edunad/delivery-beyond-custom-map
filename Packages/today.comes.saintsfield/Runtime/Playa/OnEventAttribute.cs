@@ -8,9 +8,11 @@ namespace SaintsField.Playa
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
     public class OnEventAttribute: Attribute, IPlayaAttribute, IPlayaMethodAttribute, IPlayaMethodBindAttribute, IPlayaAutoRunnerFix
     {
-        public MethodBind MethodBind => MethodBind.CustomEvent;
+        public MethodBind MethodBind => MethodBind.UnityEvent;
 
         public string EventTarget { get; }
+        public Type ComponentTypeOrNull => null;
+        public string ComponentEventName => null;
         public object Value { get; }
         public bool IsCallback { get; }
 

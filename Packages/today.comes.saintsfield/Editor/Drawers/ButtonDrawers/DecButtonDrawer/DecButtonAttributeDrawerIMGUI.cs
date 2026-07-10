@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using SaintsField.Editor.Core;
 using SaintsField.Editor.Linq;
 using SaintsField.Editor.Utils;
@@ -12,6 +13,10 @@ using SaintsField.Interfaces;
 using SaintsField.Utils;
 using UnityEditor;
 using UnityEngine;
+
+#if SAINTSFIELD_UNITASK && !SAINTSFIELD_UNITASK_DISABLE
+using Cysharp.Threading.Tasks;
+#endif
 
 namespace SaintsField.Editor.Drawers.ButtonDrawers.DecButtonDrawer
 {
@@ -30,6 +35,7 @@ namespace SaintsField.Editor.Drawers.ButtonDrawers.DecButtonDrawer
         private sealed class ButtonReturnValueIMGUI
         {
             public MethodInfo MethodInfo;
+            public Type ReturnType;
             public object Parent;
             public object Value;
         }
@@ -46,8 +52,11 @@ namespace SaintsField.Editor.Drawers.ButtonDrawers.DecButtonDrawer
             public readonly List<string> ResultErrors = new List<string>();
             public readonly List<ButtonReturnValueIMGUI> ReturnValues = new List<ButtonReturnValueIMGUI>();
             public readonly List<Waiter> Enumerators = new List<Waiter>();
+            public readonly Dictionary<Waiter, (MethodInfo methodInfo, object parent)> WaiterReturnTargets =
+                new Dictionary<Waiter, (MethodInfo methodInfo, object parent)>();
             public bool WaiterHasError;
             public bool WaiterHasFinished;
+            public bool WaiterHasCancel;
 
             public ButtonStatusIMGUI Status;
             public double StatusHideAt = -1d;
@@ -116,7 +125,7 @@ namespace SaintsField.Editor.Drawers.ButtonDrawers.DecButtonDrawer
             {
                 height += IMGUIEdit.GetPropertyHeight(
                     ReturnLabelIMGUI,
-                    returnValue.MethodInfo.ReturnType,
+                    returnValue.ReturnType,
                     returnValue.Value,
                     NoBeforeSetIMGUI,
                     _ => { },
@@ -144,7 +153,7 @@ namespace SaintsField.Editor.Drawers.ButtonDrawers.DecButtonDrawer
             {
                 float height = IMGUIEdit.GetPropertyHeight(
                     ReturnLabelIMGUI,
-                    returnValue.MethodInfo.ReturnType,
+                    returnValue.ReturnType,
                     returnValue.Value,
                     NoBeforeSetIMGUI,
                     _ => { },
@@ -163,7 +172,7 @@ namespace SaintsField.Editor.Drawers.ButtonDrawers.DecButtonDrawer
                 IMGUIEdit.OnGUI(
                     returnRect,
                     ReturnLabelIMGUI,
-                    returnValue.MethodInfo.ReturnType,
+                    returnValue.ReturnType,
                     returnValue.Value,
                     NoBeforeSetIMGUI,
                     _ => { },
@@ -341,6 +350,7 @@ namespace SaintsField.Editor.Drawers.ButtonDrawers.DecButtonDrawer
             buttonInfo.Enumerators.Clear();
             buttonInfo.WaiterHasError = false;
             buttonInfo.WaiterHasFinished = false;
+            buttonInfo.WaiterHasCancel = false;
             buttonInfo.Progress = -1f;
 
             List<string> errors = new List<string>();
@@ -367,16 +377,46 @@ namespace SaintsField.Editor.Drawers.ButtonDrawers.DecButtonDrawer
             object refreshedParent = null;
             foreach ((MethodInfo methodInfo, object result) in results)
             {
+#if SAINTSFIELD_UNITASK && !SAINTSFIELD_UNITASK_DISABLE
+                (bool returnIsUniTask, Type returnUniTaskValueType) = GetUniTaskReturnInfo(methodInfo.ReturnType);
+#endif
                 if (result is IEnumerator enumerator)
                 {
                     buttonInfo.Enumerators.Add(new Waiter(enumerator));
                 }
+                else if (result is Task task)
+                {
+                    Waiter waiter = new Waiter(task);
+                    buttonInfo.Enumerators.Add(waiter);
+                    if (!decButtonAttribute.HideReturnValue)
+                    {
+                        refreshedParent ??= SerializedUtils.GetFieldInfoAndDirectParent(property).parent;
+                        buttonInfo.WaiterReturnTargets[waiter] = (methodInfo, refreshedParent);
+                    }
+                }
+#if SAINTSFIELD_UNITASK && !SAINTSFIELD_UNITASK_DISABLE
+                else if (result is UniTask uniTask)
+                {
+                    buttonInfo.Enumerators.Add(new Waiter(uniTask));
+                }
+                else if (returnIsUniTask && returnUniTaskValueType != null)
+                {
+                    Waiter waiter = Waiter.UniTaskWithValue(result, returnUniTaskValueType);
+                    buttonInfo.Enumerators.Add(waiter);
+                    if (!decButtonAttribute.HideReturnValue)
+                    {
+                        refreshedParent ??= SerializedUtils.GetFieldInfoAndDirectParent(property).parent;
+                        buttonInfo.WaiterReturnTargets[waiter] = (methodInfo, refreshedParent);
+                    }
+                }
+#endif
                 else if (!decButtonAttribute.HideReturnValue && result != null && result.GetType() != typeof(void))
                 {
                     refreshedParent ??= SerializedUtils.GetFieldInfoAndDirectParent(property).parent;
                     buttonInfo.ReturnValues.Add(new ButtonReturnValueIMGUI
                     {
                         MethodInfo = methodInfo,
+                        ReturnType = methodInfo.ReturnType,
                         Parent = refreshedParent,
                         Value = result,
                     });
@@ -394,6 +434,7 @@ namespace SaintsField.Editor.Drawers.ButtonDrawers.DecButtonDrawer
         {
             buttonInfo.ResultErrors.Clear();
             buttonInfo.ReturnValues.Clear();
+            buttonInfo.WaiterReturnTargets.Clear();
             buttonInfo.Status = ButtonStatusIMGUI.None;
             buttonInfo.StatusHideAt = -1d;
         }
@@ -402,6 +443,7 @@ namespace SaintsField.Editor.Drawers.ButtonDrawers.DecButtonDrawer
         {
             bool hadRunner = buttonInfo.Enumerators.Count > 0;
             buttonInfo.Enumerators.Clear();
+            buttonInfo.WaiterReturnTargets.Clear();
             buttonInfo.ResultErrors.Clear();
             buttonInfo.ReturnValues.Clear();
             buttonInfo.Progress = -1f;
@@ -429,49 +471,60 @@ namespace SaintsField.Editor.Drawers.ButtonDrawers.DecButtonDrawer
 
                 if (!waiter.Done())
                 {
-                    if (waiter.Waitable != null)
+                    float curProgress = waiter.GetProgress();
+                    if (curProgress >= 0)
                     {
-                        progress = Mathf.Max(progress, waiter.Waitable.Progress);
+                        progress = Mathf.Max(progress, curProgress);
                     }
 
                     continue;
                 }
 
-                bool moveNext;
-                bool thisHasMoveError = false;
-                try
+                Waiter.MoveNextResult moveNext = waiter.MoveNext();
+                if (moveNext.Exception != null)
                 {
-                    moveNext = waiter.Enumerator.MoveNext();
-                }
-                catch (Exception e)
-                {
-                    Debug.LogException(e.InnerException ?? e);
-                    moveNext = false;
-                    thisHasMoveError = true;
+                    Debug.LogException(moveNext.Exception.InnerException ?? moveNext.Exception);
                     buttonInfo.WaiterHasError = true;
-                    buttonInfo.ResultErrors.Add(e.InnerException?.Message ?? e.Message);
+                    buttonInfo.ResultErrors.Add(moveNext.Exception.InnerException?.Message ?? moveNext.Exception.Message);
                 }
 
-                if (thisHasMoveError)
+                if (moveNext.Exception == null && moveNext.Status == Waiter.MoveNextStatus.Pending)
                 {
-                    waiter.Waitable = null;
-                }
-                else
-                {
-                    waiter.CheckCurrent();
+                    waiter.CheckCurrentNeedWaiter();
                 }
 
-                if (!moveNext)
+                if (moveNext.Status == Waiter.MoveNextStatus.Completed
+                    && moveNext.ReturnType != null
+                    && buttonInfo.WaiterReturnTargets.TryGetValue(waiter, out (MethodInfo methodInfo, object parent) returnTarget))
+                {
+                    buttonInfo.ReturnValues.Add(new ButtonReturnValueIMGUI
+                    {
+                        MethodInfo = returnTarget.methodInfo,
+                        ReturnType = moveNext.ReturnType,
+                        Parent = returnTarget.parent,
+                        Value = moveNext.ReturnValue,
+                    });
+                }
+
+                if (moveNext.Status != Waiter.MoveNextStatus.Pending)
                 {
                     finishedEnumerators.Add(waiter);
-                    if (!thisHasMoveError)
+                    if (moveNext.Status == Waiter.MoveNextStatus.Completed)
                     {
                         buttonInfo.WaiterHasFinished = true;
+                    }
+                    else if (moveNext.Status == Waiter.MoveNextStatus.Cancelled)
+                    {
+                        buttonInfo.WaiterHasCancel = true;
                     }
                 }
             }
 
             buttonInfo.Enumerators.RemoveAll(each => finishedEnumerators.Contains(each));
+            foreach (Waiter waiter in finishedEnumerators)
+            {
+                buttonInfo.WaiterReturnTargets.Remove(waiter);
+            }
 
             bool stillHaveRunner = buttonInfo.Enumerators.Count > 0;
             if (stillHaveRunner)
@@ -492,6 +545,10 @@ namespace SaintsField.Editor.Drawers.ButtonDrawers.DecButtonDrawer
             {
                 PlayStatusIMGUI(buttonInfo,
                     buttonInfo.WaiterHasFinished ? ButtonStatusIMGUI.Warning : ButtonStatusIMGUI.Error);
+            }
+            else if (buttonInfo.WaiterHasCancel)
+            {
+                PlayStatusIMGUI(buttonInfo, ButtonStatusIMGUI.Pause);
             }
             else
             {

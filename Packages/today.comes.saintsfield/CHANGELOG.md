@@ -1,5 +1,47 @@
 # Changelog
 
+## 5.22.0 ##
+
+1.  Add: `PrefixToggle` to put a toggle field ahead of a field
+2.  Add: `InputEnableIf`/`InputDisableIf`/`InputReadOnly` to enable/disable the input field, rather than the whole field area.
+3.  Fix: `AboveButton`/`BelowButton`/`PostFieldButton` gave error for static method calling if using `:static.function.name`
+
+## 5.21.5 ##
+
+1.  Add: When collapsed, `Table` now displays text info of the target cell, instead of squeezing it.
+2.  Add: Clicking on a collapsed cell now expands `Table`.
+
+## 5.21.4 ##
+
+1.  Add: Table rows now allow to fold/expand just like Unity's list [#402](https://github.com/TylerTemp/SaintsField/issues/402)
+2.  Fix: Table shown an empty row if the target Object has class attributes
+
+## 5.21.3 ##
+
+1.  Fix: `Tooltip` did not work [#412](https://github.com/TylerTemp/SaintsField/issues/412)
+2.  Unity Fix: If you have SaintsEditor enabled, fix Unity `Quaternion`, `ExposedReference<Object>` not work with `Tooltip`
+3.  Fix: `SaintsArray` could not correctly rendered
+4.  Fix: an `Addressable` error
+
+## 5.21.2 ##
+
+1.  Add: `Button` and field buttons (`AboveButton`, `BelowButton`, `PostFieldButton`) now support:
+    *   `async Task`, `async Task<T>` functions
+    *   `async UniTask`, `async UniTask<T>` functions if you have `UniTask` installed
+2.  Improve: When first installed, avoid an error that SaintsFieldConfig is not correctly generated/loaded, and gives a warning instead
+
+## 5.21.0 ##
+
+1.  Add: `OnDropdownChanged` to bind `TMP_Dropdown.OnValueChanged` event to method
+2.  Add: `OnToggleChanged` to bind `Toggle.OnValueChanged` event to method
+3.  Add: `OnSliderChanged` to bind `Slider.OnValueChanged` event to method
+4.  Add: `OnInputField*` to bind `TMP_InputField`'s related event to method:
+    *   `OnInputFieldChanged`
+    *   `OnInputFieldEndEdit`
+    *   `OnInputFieldSelect`
+    *   `OnInputFieldDeselect`
+5.  Fix: If the target is a pure IMGUI drawer, fix `LabelText` could not apply a proper label
+
 ## 5.20.0 ##
 
 1.  Fix: More input can be applied by `GUIColor`

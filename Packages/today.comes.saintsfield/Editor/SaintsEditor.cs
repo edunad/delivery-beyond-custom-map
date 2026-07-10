@@ -1046,9 +1046,21 @@ namespace SaintsField.Editor
         public static bool SaintsFieldInfoShouldDraw(SaintsFieldWithInfo saintsFieldWithInfo)
         {
             bool isMethod = saintsFieldWithInfo.MethodInfo != null;
-            bool hasNoPlaya = saintsFieldWithInfo.PlayaAttributes.Count == 0;
-            bool shouldDraw = !(isMethod && hasNoPlaya);
-            return shouldDraw;
+            bool hasNoPlaya = saintsFieldWithInfo.PlayaAttributes == null || saintsFieldWithInfo.PlayaAttributes.Count == 0;
+
+            bool isPureMethod = isMethod && hasNoPlaya;
+            if (isPureMethod)
+            {
+                return false;
+            }
+
+            // ReSharper disable once ConvertIfStatementToReturnStatement
+            if (saintsFieldWithInfo.RenderType == SaintsRenderType.ClassStruct)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         public readonly struct SaintsFieldWithRenderer
@@ -1273,16 +1285,10 @@ namespace SaintsField.Editor
                         }
                     }
                         break;
-                    case OnButtonClickAttribute onButtonClickAttribute:
+                    case IPlayaMethodBindAttribute methodBindAttribute:
                     {
                         // yield return new SaintsFieldWithRenderer(onButtonClickAttribute, new MethodBindRenderer(onButtonClickAttribute, serializedObject, fieldWithInfo));
-                        preRenderers.Add(new SaintsFieldWithRenderer(onButtonClickAttribute, new MethodBindRenderer(onButtonClickAttribute, serializedObject, fieldWithInfo)));
-                    }
-                        break;
-                    case OnEventAttribute onEventAttribute:
-                    {
-                        // yield return new SaintsFieldWithRenderer(onEventAttribute, new MethodBindRenderer(onEventAttribute, serializedObject, fieldWithInfo));
-                        preRenderers.Add(new SaintsFieldWithRenderer(onEventAttribute, new MethodBindRenderer(onEventAttribute, serializedObject, fieldWithInfo)));
+                        preRenderers.Add(new SaintsFieldWithRenderer(methodBindAttribute as IPlayaAttribute, new MethodBindRenderer(methodBindAttribute, serializedObject, fieldWithInfo)));
                     }
                         break;
                     case InfoBoxAttribute playaInfoBoxAttribute:

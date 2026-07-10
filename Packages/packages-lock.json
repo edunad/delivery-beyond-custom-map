@@ -6,10 +6,10 @@
       "source": "git",
       "dependencies": {
         "com.failcake.vis.occlusion": "1.0.0",
-        "com.failcake.vmf.importer": "1.0.0",
+        "com.failcake.vmf.importer": "1.0.2",
         "com.failcake.timers": "0.0.1"
       },
-      "hash": "0becee6ce92b7d4745d70f0975e2ef8bf8f3ee01"
+      "hash": "f36433ca07d461660f77364a22a71a54bca8b97d"
     },
     "com.failcake.timers": {
       "version": "https://github.com/edunad/FailCake.Timers.git?path=/com.failcake.timers",
@@ -32,7 +32,7 @@
       "dependencies": {
         "com.whinarn.unitymeshsimplifier": "3.1.0"
       },
-      "hash": "1bab659fbd9b672a54248a162925b28a5ce3860d"
+      "hash": "e3f1bd2d4a728f62992ac289d776ca4183915e3a"
     },
     "com.github-glitchenzo.nugetforunity": {
       "version": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
@@ -102,7 +102,7 @@
         "com.unity.nuget.mono-cecil": "1.11.4",
         "com.unity.transport": "2.6.0"
       },
-      "hash": "dcd8147281f2c7aabb7601e16fb9dcff9aa11c58"
+      "hash": "413c5a392cbaadd1ebdd5c87b901d0d83d4f32b6"
     },
     "com.unity.nuget.mono-cecil": {
       "version": "1.11.6",

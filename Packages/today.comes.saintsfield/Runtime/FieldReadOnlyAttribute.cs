@@ -9,7 +9,7 @@ using UnityEngine;
 namespace SaintsField
 {
     [Conditional("UNITY_EDITOR")]
-    [AttributeUsage(AttributeTargets.Field, AllowMultiple = true)]
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = true)]
     public class FieldReadOnlyAttribute: PropertyAttribute, ISaintsAttribute, IConditions
     {
         public SaintsAttributeType AttributeType => SaintsAttributeType.Other;

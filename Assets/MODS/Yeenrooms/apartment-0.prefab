@@ -1553,6 +1553,7 @@ MonoBehaviour:
   Ownership: 1
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
+  <InScenePlaced>k__BackingField: 0
   ActiveSceneSynchronization: 0
   SceneMigrationSynchronization: 0
   SpawnWithObservers: 1
@@ -1574,7 +1575,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: HyenaQuest.SDK::HyenaQuest.entity_room_interior
   ShowTopMostFoldoutHeaderGroup: 1
   _BOUNDS_:
-    m_Center: {x: -0.00000023841858, y: 1.4959997, z: -3.4319997}
+    m_Center: {x: -0.00000023841858, y: 1.4959996, z: -3.4319997}
     m_Extent: {x: 3.696, y: 1.496, z: 3.4320002}
   layers:
   - layer: {fileID: 1369290895944434412}

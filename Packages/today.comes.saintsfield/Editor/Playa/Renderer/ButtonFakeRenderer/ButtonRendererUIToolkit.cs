@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using SaintsField.Editor.Core;
 using SaintsField.Editor.Linq;
 using SaintsField.Editor.Playa.Renderer.BaseRenderer;
@@ -16,6 +17,10 @@ using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
+
+#if SAINTSFIELD_UNITASK && !SAINTSFIELD_UNITASK_DISABLE
+using Cysharp.Threading.Tasks;
+#endif
 
 namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
 {
@@ -36,8 +41,10 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
 
             public List<Waiter> Enumerators = new List<Waiter>();
             public IVisualElementScheduledItem ButtonTask;
-            public bool WaiterHasError = false;
-            public bool WaiterHasFinished = false;
+            public bool WaiterHasError;
+            public bool WaiterHasFinished;
+            public bool WaiterHasCancel;
+            public bool WaiterHasReturnValue;
         }
 
         // private VisualElement _returnValueContainer;
@@ -71,10 +78,31 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
             // List<VisualElement> parameterElements = new List<VisualElement>();
             object[] parameterValues = new object[parameters.Length];
             // VisualElement root = null;
+            bool returnIsUniTask = false;
+            Type returnUniTaskValueType = null;
+#if SAINTSFIELD_UNITASK && !SAINTSFIELD_UNITASK_DISABLE
+            {
+                if (typeof(UniTask).IsAssignableFrom(methodInfo.ReturnType))
+                {
+                    returnIsUniTask = true;
+                }
+
+                foreach (Type genBaseType in ReflectUtils.GetGenBaseTypes(methodInfo.ReturnType))
+                {
+                    if (genBaseType.GetGenericTypeDefinition() == typeof(UniTask<>))
+                    {
+                        returnIsUniTask = true;
+                        returnUniTaskValueType = genBaseType.GetGenericArguments()[0];
+                    }
+                }
+            }
+#endif
 
             bool hasReturnValue = !_buttonAttribute.HideReturnValue
                 && methodInfo.ReturnType != typeof(void)
-                && !typeof(IEnumerator).IsAssignableFrom(methodInfo.ReturnType);
+                && !typeof(IEnumerator).IsAssignableFrom(methodInfo.ReturnType)
+                && !typeof(Task).IsAssignableFrom(methodInfo.ReturnType)
+                && !returnIsUniTask;
 
             string buttonId = $"{FieldWithInfo.Targets[0].GetHashCode()}.{methodInfo.Name}";
 
@@ -180,6 +208,10 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
             fancyButton.MainButton.clicked += () =>
             {
                 fancyButton.ShowResult(false);
+                buttonUserData.WaiterHasError = false;
+                buttonUserData.WaiterHasFinished = false;
+                buttonUserData.WaiterHasCancel = false;
+                buttonUserData.WaiterHasReturnValue = false;
 
                 SaintsContext.SerializedProperty = _serializedProperty;
                 int targetCount = FieldWithInfo.Targets.Count;
@@ -202,6 +234,16 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
                         break;
                     }
 
+// #if SAINTSFIELD_UNITASK && !SAINTSFIELD_UNITASK_DISABLE
+//                     {
+//                         Debug.Log(result?.GetType().FullName);
+//                         if (result is UniTask ut)
+//                         {
+//                             ut.ToCoroutine();
+//                             result = UniTask.ToCoroutine(() => ut);
+//                         }
+//                     }
+// #endif
                     returnValues[index] = result;
                     if (isStruct)
                     {
@@ -257,11 +299,48 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
                 }
 
                 buttonUserData.Enumerators.Clear();
-                foreach (IEnumerator enumerator in returnValues.OfType<IEnumerator>())
+                foreach (object returnValue in returnValues)
                 {
-                    Waiter waiter = new Waiter(enumerator);
-                    buttonUserData.Enumerators.Add(waiter);
+                    switch (returnValue)
+                    {
+                        case IEnumerator enumerator:
+                        {
+                            Waiter waiter = new Waiter(enumerator);
+                            buttonUserData.Enumerators.Add(waiter);
+                        }
+                            break;
+                        case Task task:
+                        {
+                            Waiter waiter = new Waiter(task);
+                            buttonUserData.Enumerators.Add(waiter);
+                        }
+                            break;
+
+#if SAINTSFIELD_UNITASK && !SAINTSFIELD_UNITASK_DISABLE
+                        case UniTask uniTask:
+                        {
+                            Waiter waiter = new Waiter(uniTask);
+                            buttonUserData.Enumerators.Add(waiter);
+                        }
+                            break;
+#endif
+                        default:
+                            if (returnIsUniTask && returnUniTaskValueType != null)
+                            {
+#if SAINTSFIELD_UNITASK && !SAINTSFIELD_UNITASK_DISABLE
+                                Waiter waiter = Waiter.UniTaskWithValue(returnValue, returnUniTaskValueType);
+                                buttonUserData.Enumerators.Add(waiter);
+#endif
+                            }
+
+                            break;
+                    }
                 }
+                // foreach (IEnumerator enumerator in returnValues.OfType<IEnumerator>())
+                // {
+                //     Waiter waiter = new Waiter(enumerator);
+                //     buttonUserData.Enumerators.Add(waiter);
+                // }
 
                 if (buttonUserData.Enumerators.Count == 0)
                 {
@@ -290,51 +369,72 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
 
                             if (!waiter.Done())
                             {
-                                if (waiter.Waitable != null)
+                                float curProcess = waiter.GetProgress();
+                                if (curProcess > 0)
                                 {
-                                    float curProcess = waiter.Waitable.Progress;
                                     progress = Mathf.Max(progress, curProcess);
                                 }
 
                                 continue;
                             }
 
-                            bool moveNext;
-                            bool thisHasMoveError = false;
-                            try
+                            Waiter.MoveNextResult moveNext = waiter.MoveNext();
+                            if (moveNext.Exception != null)
                             {
-                                moveNext = waiter.Enumerator.MoveNext();
-                            }
-                            catch (Exception e)
-                            {
-                                Debug.LogException(e.InnerException ?? e);
-                                moveNext = false;
-                                thisHasMoveError = true;
+                                Debug.LogException(moveNext.Exception.InnerException ?? moveNext.Exception);
 
                                 VisualElement result = fancyButton.ShowResult(true);
                                 // Debug.Log("show error result");
-                                result.Add(MakeErrorBox(e));
+                                result.Add(MakeErrorBox(moveNext.Exception));
                                 buttonUserData.WaiterHasError = true;
                             }
 
-                            if (thisHasMoveError)
+                            if (moveNext.Exception == null && moveNext.Status == Waiter.MoveNextStatus.Pending)
                             {
-                                waiter.Waitable = null;
+                                waiter.CheckCurrentNeedWaiter();
                             }
-                            else
+
+                            if (!_buttonAttribute.HideReturnValue && moveNext.Status == Waiter.MoveNextStatus.Completed && moveNext.ReturnType != null)
                             {
-                                waiter.CheckCurrent();
+                                (VisualElement taskResult, bool taskIsNestedField) = UIToolkitEdit.UIToolkitValueEdit(
+                                    null,
+                                    "<color=green>[return]</color>",
+                                    moveNext.ReturnType,
+                                    moveNext.ReturnValue,
+                                    null,
+                                    _ => { },
+                                    false,
+                                    InAnyHorizontalLayout,
+                                    ReflectCache.GetCustomAttributes(FieldWithInfo.MethodInfo),
+                                    FieldWithInfo.Targets,
+                                    this,
+                                    $"{buttonId}.[return]"
+                                );
+                                if(taskResult != null)
+                                {
+                                    VisualElement result = fancyButton.ShowResult(true);
+                                    if (taskIsNestedField && taskResult is Foldout{value: false} fo)
+                                    {
+                                        fo.RegisterCallback<AttachToPanelEvent>(_ => fo.value = true);
+                                    }
+                                    result.Add(taskResult);
+                                    buttonUserData.WaiterHasReturnValue = true;
+                                }
                             }
 
                             // Debug.Log(bindEnumerator.Current);
                             // ReSharper disable once InvertIf
-                            if (!moveNext)
+                            if (moveNext.Status != Waiter.MoveNextStatus.Pending)
                             {
                                 finishedEnumerators.Add(waiter);
 
-                                if(!thisHasMoveError)
+                                if(moveNext.Status == Waiter.MoveNextStatus.Completed)
                                 {
                                     buttonUserData.WaiterHasFinished = true;
+                                }
+                                else if (moveNext.Status == Waiter.MoveNextStatus.Cancelled)
+                                {
+                                    buttonUserData.WaiterHasCancel = true;
                                 }
                             }
                         }
@@ -363,10 +463,21 @@ namespace SaintsField.Editor.Playa.Renderer.ButtonFakeRenderer
                                         statusIndicatorElement.PlayError();
                                     }
                                 }
+                                else if (buttonUserData.WaiterHasCancel)
+                                {
+                                    statusIndicatorElement.PlayPause();
+                                    if(!buttonUserData.WaiterHasReturnValue)
+                                    {
+                                        fancyButton.ShowResult(false);
+                                    }
+                                }
                                 else
                                 {
                                     statusIndicatorElement.PlayOk();
-                                    fancyButton.ShowResult(false);
+                                    if(!buttonUserData.WaiterHasReturnValue)
+                                    {
+                                        fancyButton.ShowResult(false);
+                                    }
                                 }
                             }
                         }

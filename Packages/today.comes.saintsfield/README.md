@@ -113,13 +113,11 @@ namespace: `SaintsField`
 
 ## Change Log ##
 
-**5.20.0**
+**5.22.0**
 
-1.  Fix: More input can be applied by `GUIColor`
-2.  Fix: `ArrowHandleCap` could not correctly pointing at the exactly point
-3.  Fix: Set a bit delay for `MinValue` & `MaxValue` auto correction so when you have both but conflicted values, it now don't trigger a loop call (stack overflow)
-4.  Add: `CompInfoBox` to draw component top info boxes
-5.  Add: `CompText` to draw component top text with `AboveText` behavior
+1.  Add: `PrefixToggle` to put a toggle field ahead of a field
+2.  Add: `InputEnableIf`/`InputDisableIf`/`InputReadOnly` to enable/disable the input field, rather than the whole field area.
+3.  Fix: `AboveButton`/`BelowButton`/`PostFieldButton` gave error for static method calling if using `:static.function.name`
 
 ## Usage ##
 
@@ -191,6 +189,7 @@ namespace: `SaintsField`
         *   [`OnArraySizeChanged`](https://saintsfield.comes.today/general-attributes/validate--restrict/onarraysizechanged)
         *   [`ReadOnly`/`DisableIf`/`EnableIf`](https://saintsfield.comes.today/general-attributes/validate--restrict/readonlydisableifenableif)
         *   [`FieldEnableIf`/`FieldDisableIf`/`FieldReadOnly`](https://saintsfield.comes.today/general-attributes/validate--restrict/fieldenableiffielddisableiffieldreadonly)
+        *   [`InputEnableIf`/`InputDisableIf`/`InputReadOnly`](https://saintsfield.comes.today/general-attributes/validate--restrict/inputenableifinputdisableifinputreadonly)
         *   [`ShowIf`/`HideIf`](https://saintsfield.comes.today/general-attributes/validate--restrict/showifhideif)
         *   [`FieldShowIf` / `FieldHideIf`](https://saintsfield.comes.today/general-attributes/validate--restrict/fieldshowif--fieldhideif)
         *   [`Required`](https://saintsfield.comes.today/general-attributes/validate--restrict/required)
@@ -213,6 +212,7 @@ namespace: `SaintsField`
         *   [`EnumToggleButtons`](https://saintsfield.comes.today/general-attributes/miscellaneous/enumtogglebuttons)
         *   [`ResizableTextArea`](https://saintsfield.comes.today/general-attributes/miscellaneous/resizabletextarea)
         *   [`LeftToggle`](https://saintsfield.comes.today/general-attributes/miscellaneous/lefttoggle)
+        *   [`PrefixToggle`](https://saintsfield.comes.today/general-attributes/miscellaneous/prefixtoggle)
         *   [`ResourcePath`](https://saintsfield.comes.today/general-attributes/miscellaneous/resourcepath)
         *   [`ResourceFolder`](https://saintsfield.comes.today/general-attributes/miscellaneous/resourcefolder)
         *   [`FieldDefaultExpand`](https://saintsfield.comes.today/general-attributes/miscellaneous/fielddefaultexpand)
@@ -222,8 +222,12 @@ namespace: `SaintsField`
         *   [`AboveImage`/`BelowImage`](https://saintsfield.comes.today/general-attributes/miscellaneous/aboveimagebelowimage)
         *   [`ParticlePlay`](https://saintsfield.comes.today/general-attributes/miscellaneous/particleplay)
         *   [`ButtonAddOnClick`](https://saintsfield.comes.today/general-attributes/miscellaneous/buttonaddonclick)
-        *   [`OnButtonClick`](https://saintsfield.comes.today/general-attributes/miscellaneous/onbuttonclick)
         *   [`OnEvent`](https://saintsfield.comes.today/general-attributes/miscellaneous/onevent)
+        *   [`OnButtonClick`](https://saintsfield.comes.today/general-attributes/miscellaneous/onbuttonclick)
+        *   [`OnDropdownChanged`](https://saintsfield.comes.today/general-attributes/miscellaneous/ondropdownchanged)
+        *   [`OnToggleChanged`](https://saintsfield.comes.today/general-attributes/miscellaneous/ontogglechanged)
+        *   [`OnSliderChanged`](https://saintsfield.comes.today/general-attributes/miscellaneous/onsliderchanged)
+        *   [`OnInputField*`](https://saintsfield.comes.today/general-attributes/miscellaneous/oninputfield)
         *   [`ColorPalette`](https://saintsfield.comes.today/general-attributes/miscellaneous/colorpalette)
         *   [`Searchable`](https://saintsfield.comes.today/general-attributes/miscellaneous/searchable)
         *   [`DateTime`](https://saintsfield.comes.today/general-attributes/miscellaneous/datetime)

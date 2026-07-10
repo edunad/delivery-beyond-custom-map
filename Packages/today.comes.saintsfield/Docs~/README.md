@@ -863,7 +863,13 @@ go give a star to them!)
 > [!IMPORTANT]
 > Enable `SaintsEditor` before using
 
-Draw a button for a function. If the method have arguments (required or optional), it'll draw inputs for these arguments. UI Toolkit: if the method have a return value, the result will also be shown.
+Draw a button for a function. 
+*   If the method have arguments (required or optional), it'll draw inputs for these arguments. 
+*   If the method have a return value, the result will also be shown.
+*   If the method returns `IEnumerator`, it will wait that enumerator with a progress bar, and allow you to cancel in the middle
+*   If the method returns `async Task`, `async UniTask`, it will execute the task until it finishs or errors out
+*   If the method returns `async Task<T>`, `async UniTask<T>`, apon completed, the returned value will be displayed
+*   If any error happends, and Error box with info will display
 
 *   `string buttonLabel = null` the button label. If null, it'll use the function name. If it starts with `$`, use a callback or field value as the label.
     Rich text is supported.
@@ -942,6 +948,9 @@ If the yield type is `AsyncOperation`, a progress bar will display.
 
 
 ```csharp
+// Please ensure you already have SaintsEditor enabled in your project before trying this example
+using SaintsField.Playa;
+
 [Button]
 private void NormalFunc()
 {
@@ -996,6 +1005,56 @@ private IEnumerator AsyncOp()
 
 [![video](https://github.com/user-attachments/assets/dc39b75a-2f40-4518-a1a9-bef5a59f1455)](https://github.com/user-attachments/assets/87900181-8c17-42f5-a050-01f9a945ff94)
 
+You can use `async Task`, `async Task<T>`, `async UniTask`, `async UniTask<T>` to execute colored function.
+
+(If you installed UniTask by UnityPackage, please manually add `SAINTSFIELD_UNITASK` marco to enable this function)
+
+```csharp
+// Please ensure you already have SaintsEditor enabled in your project before trying this example
+using SaintsField.Playa;
+
+[Button]
+private async Task AsyncVoid()
+{
+    Debug.Log("Async start");
+    await Task.Delay(1000);
+    Debug.Log("Async end");
+}
+
+[Button]
+private async Task<int> AsyncWithInt()
+{
+    Debug.Log("Async start");
+    await Task.Delay(1000);
+    Debug.Log("Async end");
+    return 100;
+}
+
+[ShowInInspector] private bool _uniTaskUntil;
+
+[Button]
+private async UniTask AsyncUniTaskBase()
+{
+    Debug.Log("Async start");
+    // await UniTask.Yield();
+    await UniTask.WaitUntil(() => _uniTaskUntil);
+    // throw new Exception("xx");
+    Debug.Log("Async end");
+}
+
+[Button]
+private async UniTask<string> AsyncUniTaskValue()
+{
+    Debug.Log("Async start");
+    // await UniTask.Yield();
+    await UniTask.WaitUntil(() => _uniTaskUntil);
+    // throw new Exception("xx");
+    return "fine";
+}
+```
+
+[![video](https://github.com/user-attachments/assets/52fe1e31-368f-495e-b336-6ec5822af7ca)](https://github.com/user-attachments/assets/eb4db4f5-5ffc-4254-8cde-cf16217b4790)
+
 #### `AboveButton`/`BelowButton`/`PostFieldButton` ####
 
 There are 3 general buttons:
@@ -1028,9 +1087,16 @@ All of them have the same arguments:
 
     See `GroupBy` section. Does **NOT** work on `PostFieldButton`
 
-*   AllowMultiple: Yes
+*   Allow Multiple: Yes
 
 Note: Compared to `Button` in `SaintsEditor`, these buttons can receive the value of the decorated field, and will not get parameter drawers.
+
+About the function been called:
+
+*   If the method returns `IEnumerator`, it will wait that enumerator with a progress bar, and allow you to cancel in the middle
+*   If the method returns `async Task`, `async UniTask`, it will execute the task until it finishs or errors out
+*   If the method returns `async Task<T>`, `async UniTask<T>`, apon completed, the returned value will be displayed
+*   If any error happends, and Error box with info will display
 
 ```csharp
 using SaintsField;
@@ -1084,6 +1150,50 @@ private void Toggle() => _errorOut = !_errorOut;
 ```
 
 [![video](https://github.com/TylerTemp/SaintsField/assets/6391063/4e02498e-ae90-4b11-8076-e26256ea0369)](https://github.com/TylerTemp/SaintsField/assets/6391063/f225115b-f7de-4273-be49-d830766e82e7)
+
+Example of colored functions:
+
+```csharp
+[AboveButton(nameof(AsyncVoid))]
+[BelowButton(nameof(AsyncWithInt))]
+[PostFieldButton(nameof(AsyncUniTaskBase), "<icon=star.png/>")]
+[BelowButton(nameof(AsyncUniTaskValue))]
+public bool ok;
+
+private async Task AsyncVoid()
+{
+    Debug.Log("Async start");
+    await Task.Delay(1000);
+    Debug.Log("Async end");
+}
+
+private async Task<int> AsyncWithInt()
+{
+    Debug.Log("Async start");
+    await Task.Delay(1000);
+    Debug.Log("Async end");
+    return 100;
+}
+
+private async UniTask AsyncUniTaskBase()
+{
+    Debug.Log("Async start");
+    // await UniTask.Yield();
+    await UniTask.WaitUntil(() => ok);
+    // throw new Exception("xx");
+    Debug.Log("Async end");
+}
+private async UniTask<string> AsyncUniTaskValue()
+{
+    Debug.Log("Async start");
+    // await UniTask.Yield();
+    await UniTask.WaitUntil(() => ok);
+    // throw new Exception("xx");
+    return "fine";
+}
+```
+
+[![video](https://github.com/user-attachments/assets/c6ee0aa7-2887-45f6-82dd-62e711893215)](https://github.com/user-attachments/assets/f131b677-f07c-409e-8bd6-a5237c501441)
 
 ### Game Related ###
 
@@ -1923,9 +2033,9 @@ UI Toolkit: `Button`, `ShowInInspector` & `Playa*` will work as expected, and `L
 
 **Parameters**:
 
-*   `bool defaultExpanded=false`: Should the foldout be expanded by default?
 *   `bool hideAddButton=false`: Should the add button be hidden?
 *   `bool hideRemoveButton=false`: Shoule the remove button be hidden?
+*   `bool defaultCollapse=false`: Should all the rows be collapsed by default?
 
 ```csharp
 using SaintsField;
@@ -1946,6 +2056,10 @@ public MyStruct[] myStructs;
 ```
 
 [![video](https://github.com/user-attachments/assets/82193a57-c051-4188-950d-9e7a9ee6e08d)](https://github.com/user-attachments/assets/1c574c0c-56e0-4912-8e00-49fb7e29d80c)
+
+You can use foldout on beginning of each row to fold/expand the row. Or use menu on top right to toggle all
+
+[![video](https://github.com/user-attachments/assets/87169f32-ba3b-4506-8af6-362a67c61ebe)](https://github.com/user-attachments/assets/95c52aad-83d0-492c-9364-5001f3ebfbba)
 
 **`TableColumn`**
 
@@ -1969,7 +2083,7 @@ public List<MyStruct> myStructs;
 
 ![image](https://github.com/user-attachments/assets/53a20670-c281-49e1-a034-c11d96d270bc)
 
-For UI Toolkit, You can also use `Button`, `ShowInInspector` etc.:
+You can also use `Button`, `ShowInInspector` etc.:
 
 ```csharp
 using SaintsField;
@@ -3506,6 +3620,46 @@ public bool ShouldEnable(string input) => input.Length < 6;
 [FieldEnableIf(nameof(ShouldEnableElement))] public string[] forArray;
 public bool ShouldEnableElement(string element, int index) => index % 2 == 0;
 ```
+
+
+#### `InputEnableIf`/`InputDisableIf`/`InputReadOnly` ####
+
+Like `EnableIf`/`DisableIf`, but it only disable the input fields.
+
+Useful if you want to combine it with `PrefixToggle`, `AboveButton`, `BeblowButton` so these control will not get disabled together.
+
+It shares exactly the same syntax as `EnableIf`/`DisableIf`
+
+Example of only disable the field
+
+```csharp
+using SaintsField;
+
+public bool disableMe;
+
+[InputDisableIf(nameof(disableMe))]
+[AboveButton(":Debug.Log")]
+[BelowButton(":Debug.Log")]
+[PostFieldButton(":Debug.Log", "L")]
+[PrefixToggle(nameof(useHp))]
+public int myField;
+```
+
+[![video](https://github.com/user-attachments/assets/e01f03d5-7f3e-4701-85bd-83f45c6ef9ce)](https://github.com/user-attachments/assets/45d313d0-280b-43b3-8c53-7e6967cb83e1)
+
+work with PrefixToggle:
+
+```csharp
+using SaintsField;
+
+// Example: useful with `InputEnableIf`, `InputDisableIf` to control field edit
+[HideIf(true)] public bool useHp;
+// only allow to edit if it's checked
+[PrefixToggle(nameof(useHp)), InputEnableIf(nameof(useHp)), Range(0, 100)] public int hpValue;
+```
+
+[![video](https://github.com/user-attachments/assets/773fb404-8a9a-4f7f-b89a-c39e30564426)](https://github.com/user-attachments/assets/40b23e99-9752-4244-8125-23cbd11edf43)
+
 
 #### `ShowIf`/`HideIf` ####
 
@@ -5416,6 +5570,100 @@ using SaintsField;
 
 ![left_toggle](https://github.com/TylerTemp/SaintsField/assets/6391063/bb3de042-bfd8-4fb7-b8d6-7f0db070a761)
 
+#### `PrefixToggle` ####
+
+Put a toggle in front of the field
+
+**Parameters**:
+
+*   `string name`: toggle target. Either be the name of the serializable bool field, or a field/property of a non-serializable bool  
+*   `string showIf=""`: a callback/field/property to control if this prefix toggle need to show
+
+Allow Multiple: Yes
+
+```csharp
+using SaintsField;
+
+// Example: put a bool field as a prefix of another field
+// hide the toggle field itself
+[HideIf(true)] public bool myBool;
+// prefix it
+[PrefixToggle(nameof(myBool))] public int myValue;
+
+// Example: use a non-serialized field/property as a toggle prefix
+// this is a not serialized field
+private bool _nonSerBool;
+[PrefixToggle(nameof(_nonSerBool))] public GameObject myG;
+```
+
+![](https://github.com/user-attachments/assets/a29eedae-eb9d-49eb-a51d-1af2b956b850)
+
+Control field disable:
+
+```csharp
+using SaintsField;
+
+// Example: useful with `InputEnableIf`, `InputDisableIf` to control field edit
+[HideIf(true)] public bool useHp;
+// only allow to edit if it's checked
+[PrefixToggle(nameof(useHp)), InputEnableIf(nameof(useHp)), Range(0, 100)] public int hpValue;
+```
+
+[![video](https://github.com/user-attachments/assets/773fb404-8a9a-4f7f-b89a-c39e30564426)](https://github.com/user-attachments/assets/40b23e99-9752-4244-8125-23cbd11edf43)
+
+Control show/hide:
+
+```csharp
+ using SaintsField;
+
+// Example: you can use `ShowIf` to control if you want the toggle show/hide
+[Range(-10, 10)] public int range;
+public bool ShowIfPositive() => range > 0;
+
+[HideIf(true)] public bool overrideIfPositive;
+[PrefixToggle(nameof(overrideIfPositive), showIf: nameof(ShowIfPositive))] public int v;
+```
+
+[![video](https://github.com/user-attachments/assets/046cbfde-0b26-40b3-91f3-788e9f8484ac)](https://github.com/user-attachments/assets/638c2266-5423-4359-afbb-dcf74f8570aa)
+
+Mimic toggle group:
+
+```csharp
+// Example: you can use it to mimic a toggle group
+[HideIf(true), OnValueChanged(nameof(ChangedA))] public bool optionA = true;
+[PrefixToggle(nameof(optionA)), InputEnableIf(nameof(optionA))] public int valueA;
+[HideIf(true), OnValueChanged(nameof(ChangedB))] public bool optionB;
+[PrefixToggle(nameof(optionB)), InputEnableIf(nameof(optionB))] public GameObject valueB;
+[HideIf(true), OnValueChanged(nameof(ChangedC))] public bool optionC;
+[PrefixToggle(nameof(optionC)), InputEnableIf(nameof(optionC))] public Color valueC;
+
+private void ChangedA(bool on)
+{
+    if(on)
+    {
+        optionB = optionC = false;
+    }
+}
+
+private void ChangedB(bool on)
+{
+    if(on)
+    {
+        optionA = optionC = false;
+    }
+}
+
+private void ChangedC(bool on)
+{
+    if(on)
+    {
+        optionA = optionB = false;
+    }
+}
+```
+
+[![video](https://github.com/user-attachments/assets/0f53a95e-c329-4e80-a492-23d4f14f8197)](https://github.com/user-attachments/assets/368d65ad-f5f4-4065-a5b1-24dbd68734f2)
+
 #### `ResourcePath` ####
 
 A tool to pick a resource path (a string) with:
@@ -5759,60 +6007,6 @@ private void OnClick()
 
 ![buttonaddonclick](https://github.com/TylerTemp/SaintsField/assets/6391063/9c827d24-677c-437a-ad50-fe953a07d6c2)
 
-#### `OnButtonClick` ####
-
-> [!IMPORTANT]
-> Enable `SaintsEditor` before using
-
-This is a method decorator, which will bind this method to the target button's click event.
-
-Parameters:
-
-*   `string buttonTarget=null` the target button. `null` to get it form the current target.
-*   `object value=null` the value passed to the method. Note unity only support `bool`, `int`, `float`, `string` and `UnityEngine.Object`. To pass a `UnityEngine.Object`, use a string name of the target, and set the `isCallback` parameter to `true`
-*   `bool isCallback=false`: when `value` is a string, set this to `true` to obtain the actual value from a method/property/field
-
-```csharp
-// Please ensure you already have SaintsEditor enabled in your project before trying this example
-using SaintsField.Playa;
-
-[OnButtonClick]
-public void OnButtonClickVoid()
-{
-    Debug.Log("OnButtonClick Void");
-}
-
-[OnButtonClick(value: 2)]
-public void OnButtonClickInt(int value)
-{
-    Debug.Log($"OnButtonClick ${value}");
-}
-
-[OnButtonClick(value: true)]
-public void OnButtonClickBool(bool value)
-{
-    Debug.Log($"OnButtonClick ${value}");
-}
-
-[OnButtonClick(value: 0.3f)]
-public void OnButtonClickFloat(float value)
-{
-    Debug.Log($"OnButtonClick ${value}");
-}
-
-private GameObject ThisGo => this.gameObject;
-
-[OnButtonClick(value: nameof(ThisGo), isCallback: true)]
-public void OnButtonClickComp(UnityEngine.Object value)
-{
-    Debug.Log($"OnButtonClick ${value}");
-}
-```
-
-It'll display a UI that where the event is binded
-
-![image](https://github.com/user-attachments/assets/79be0018-387f-427c-aacb-bfd4f7b43187)
-
 #### `OnEvent` ####
 
 > [!IMPORTANT]
@@ -5868,6 +6062,254 @@ public class CustomEventExample : MonoBehaviour
 ```
 
 ![](https://github.com/user-attachments/assets/419700a4-a0cd-4cb7-8338-da651643c38a)
+
+
+#### `OnButtonClick` ####
+
+> [!IMPORTANT]
+> Enable `SaintsEditor` before using
+
+This is a method decorator, which will bind this method to the target button's click event.
+
+Parameters:
+
+*   `string buttonTarget=null` the target button. `null` to get it form the current target.
+*   `object value=null` the value passed to the method. Note unity only support `bool`, `int`, `float`, `string` and `UnityEngine.Object`. To pass a `UnityEngine.Object`, use a string name of the target, and set the `isCallback` parameter to `true`
+*   `bool isCallback=false`: when `value` is a string, set this to `true` to obtain the actual value from a method/property/field
+
+```csharp
+// Please ensure you already have SaintsEditor enabled in your project before trying this example
+using SaintsField.Playa;
+
+[OnButtonClick]
+public void OnButtonClickVoid()
+{
+    Debug.Log("OnButtonClick Void");
+}
+
+[OnButtonClick(value: 2)]
+public void OnButtonClickInt(int value)
+{
+    Debug.Log($"OnButtonClick ${value}");
+}
+
+[OnButtonClick(value: true)]
+public void OnButtonClickBool(bool value)
+{
+    Debug.Log($"OnButtonClick ${value}");
+}
+
+[OnButtonClick(value: 0.3f)]
+public void OnButtonClickFloat(float value)
+{
+    Debug.Log($"OnButtonClick ${value}");
+}
+
+private GameObject ThisGo => this.gameObject;
+
+[OnButtonClick(value: nameof(ThisGo), isCallback: true)]
+public void OnButtonClickComp(UnityEngine.Object value)
+{
+    Debug.Log($"OnButtonClick ${value}");
+}
+```
+
+It'll display a UI that where the event is binded
+
+![image](https://github.com/user-attachments/assets/79be0018-387f-427c-aacb-bfd4f7b43187)
+
+#### `OnDropdownChanged` ####
+
+> [!IMPORTANT]
+> Enable `SaintsEditor` before using
+
+This is a method decorator, which will bind this method to the target `TMP_Dropdown`'s `onValueChanged<int>` event.
+
+Parameters:
+
+*   `string buttonTarget=null` the target button. `null` to get it form the current target.
+*   `object value=null` the value passed to the method. Note unity only support `bool`, `int`, `float`, `string` and `UnityEngine.Object`. To pass a `UnityEngine.Object`, use a string name of the target, and set the `isCallback` parameter to `true`
+*   `bool isCallback=false`: when `value` is a string, set this to `true` to obtain the actual value from a method/property/field
+
+```csharp
+// Please ensure you already have SaintsEditor enabled in your project before trying this example
+using SaintsField;
+
+[OnDropdownChanged]  // bind a void
+public void DropdownChangedVoid()
+{
+}
+
+[OnDropdownChanged]  // bind to receive the value
+public void DropdownChangedInt(int index)
+{
+}
+
+[OnDropdownChanged(value: "My Custom String")]  // bind with a static value callback
+public void OtherMethodStr(string str)
+{
+}
+
+[GetInSiblings] public TMP_Dropdown dropdown;
+
+public TMP_Dropdown GetMyDropdown() => dropdown;
+
+[OnDropdownChanged(nameof(GetMyDropdown))] // taget is a callback (support field/property/function)
+public void BindFromOtherTarget(int dropdownIndex)
+{
+}
+```
+
+It'll display a UI that where the event is binded
+
+![image](https://github.com/user-attachments/assets/63772474-ef7f-48b6-94ed-e11b025a7fb4)
+
+#### `OnToggleChanged` ####
+
+> [!IMPORTANT]
+> Enable `SaintsEditor` before using
+
+This is a method decorator, which will bind this method to the target `Toggle`'s `onValueChanged<bool>` event.
+
+Parameters:
+
+*   `string buttonTarget=null` the target button. `null` to get it form the current target.
+*   `object value=null` the value passed to the method. Note unity only support `bool`, `int`, `float`, `string` and `UnityEngine.Object`. To pass a `UnityEngine.Object`, use a string name of the target, and set the `isCallback` parameter to `true`
+*   `bool isCallback=false`: when `value` is a string, set this to `true` to obtain the actual value from a method/property/field
+
+```csharp
+// Please ensure you already have SaintsEditor enabled in your project before trying this example
+using SaintsField;
+
+[OnToggleChanged]  // bind a void
+public void ToggleChangedVoid()
+{
+}
+
+[OnToggleChanged]  // bind to receive the value
+public void ToggleChangedBool(bool isOn)
+{
+}
+
+[OnToggleChanged(value: "My Custom String")]  // bind with a static value callback
+public void OtherMethodStr(string str)
+{
+}
+
+[GetInSiblings] public Toggle toggle;
+
+public Toggle GetMyToggle() => toggle;
+
+[OnToggleChanged(nameof(GetMyToggle))] // taget is a callback (support field/property/function)
+public void BindFromOtherTarget(bool isOn)
+{
+}
+```
+
+It'll display a UI that where the event is binded
+
+![image](https://github.com/user-attachments/assets/0f7763db-f95f-45a4-bef7-51d891dfb3e5)
+
+#### `OnSliderChanged` ####
+
+> [!IMPORTANT]
+> Enable `SaintsEditor` before using
+
+This is a method decorator, which will bind this method to the target `Slider`'s `onValueChanged<float>` event.
+
+Parameters:
+
+*   `string buttonTarget=null` the target button. `null` to get it form the current target.
+*   `object value=null` the value passed to the method. Note unity only support `bool`, `int`, `float`, `string` and `UnityEngine.Object`. To pass a `UnityEngine.Object`, use a string name of the target, and set the `isCallback` parameter to `true`
+*   `bool isCallback=false`: when `value` is a string, set this to `true` to obtain the actual value from a method/property/field
+
+```csharp
+// Please ensure you already have SaintsEditor enabled in your project before trying this example
+using SaintsField;
+
+[OnSliderChanged]  // bind a void
+public void SliderChangedVoid()
+{
+}
+
+[OnSliderChanged]  // bind to receive the value
+public void SliderChangedFloat(float value)
+{
+}
+
+[OnSliderChanged(value: "My Custom String")]  // bind with a static value callback
+public void OtherMethodStr(string str)
+{
+}
+
+[GetInSiblings] public Slider slider;
+
+public Slider GetMySlider() => slider;
+
+[OnSliderChanged(nameof(GetMySlider))] // taget is a callback (support field/property/function)
+public void BindFromOtherTarget(float s)
+{
+}
+```
+
+It'll display a UI that where the event is binded
+
+![image](https://github.com/user-attachments/assets/6bf490ce-ba4c-4d53-bbc5-4d857d216f5a)
+
+#### `OnInputField*` ####
+
+> [!IMPORTANT]
+> Enable `SaintsEditor` before using
+
+This is a method decorator, which will bind this method to the target `TMP_InputField`'s related event:
+
+*   `OnInputFieldChanged`
+*   `OnInputFieldEndEdit`
+*   `OnInputFieldSelect`
+*   `OnInputFieldDeselect`
+
+Parameters:
+
+*   `string buttonTarget=null` the target button. `null` to get it form the current target.
+*   `object value=null` the value passed to the method. Note unity only support `bool`, `int`, `float`, `string` and `UnityEngine.Object`. To pass a `UnityEngine.Object`, use a string name of the target, and set the `isCallback` parameter to `true`
+*   `bool isCallback=false`: when `value` is a string, set this to `true` to obtain the actual value from a method/property/field
+
+```csharp
+// Please ensure you already have SaintsEditor enabled in your project before trying this example
+using SaintsField;
+
+[OnInputFieldEndEdit]  // bind a void
+public void InputFieldEndEdit()
+{
+    Debug.Log("InputFieldEndEdit Void");
+}
+
+[OnInputFieldChanged]  // bind to receive the value
+public void OnInputFieldChanged(string value)
+{
+    Debug.Log($"InputFieldChanged {value}");
+}
+
+[OnInputFieldSelect(value: "My Custom String")]  // bind with a static value callback
+public void OtherMethodStr(string str)
+{
+    Debug.Log($"OtherMethod {str}");
+}
+
+[GetInSiblings] public TMP_InputField inputField;
+
+public TMP_InputField GetMyInputField() => inputField;
+
+[OnInputFieldDeselect(nameof(GetMyInputField))] // taget is a callback (support field/property/function)
+public void BindFromOtherTarget(string val)
+{
+    Debug.Log($"BindFromOtherTarget {val}");
+}
+```
+
+It'll display a UI that where the event is binded
+
+![image](https://github.com/user-attachments/assets/09573a19-5b91-46d4-8605-4c0b3b536849)
 
 #### `ColorPalette` ####
 
