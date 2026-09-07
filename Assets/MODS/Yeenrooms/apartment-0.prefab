@@ -1446,10 +1446,6 @@ PrefabInstance:
       propertyPath: m_RenderingLayerMask
       value: 256
       objectReference: {fileID: 0}
-    - target: {fileID: -8211427979381742247, guid: 883fb100a3f4b5f47be9d281e3f64ca0, type: 3}
-      propertyPath: m_StaticShadowCaster
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: -3051805867153386228, guid: 883fb100a3f4b5f47be9d281e3f64ca0, type: 3}
       propertyPath: m_Name
       value: apartment-0
@@ -1549,11 +1545,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
   GlobalObjectIdHash: 396436656
   InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
-  <InScenePlaced>k__BackingField: 0
+  m_InScenePlaced: 0
   ActiveSceneSynchronization: 0
   SceneMigrationSynchronization: 0
   SpawnWithObservers: 1

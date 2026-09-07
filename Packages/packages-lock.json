@@ -100,7 +100,7 @@
         "com.unity.nuget.mono-cecil": "1.11.4",
         "com.unity.transport": "2.6.0"
       },
-      "hash": "413c5a392cbaadd1ebdd5c87b901d0d83d4f32b6"
+      "hash": "cbaa81bac0700f6385ec11f9b9d5ed2e8c75ac1d"
     },
     "com.unity.nuget.mono-cecil": {
       "version": "1.11.6",

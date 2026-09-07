@@ -11,6 +11,7 @@ ScriptedImporter:
   GenerateMaterialData: 1
   GenerateTextures: 1
   GenerateEntities: 1
+  GenerateUVLightmap: 0
   GenerateColliders: 1
   IsReadable: 1
   Quality: 1
