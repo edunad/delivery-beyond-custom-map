@@ -2421,7 +2421,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 8754044158761616025}
+    m_TransformParent: {fileID: 176088290809891321}
     m_Modifications:
     - target: {fileID: 324626184304589510, guid: ee43ced8bcc91254b836afa98c2eeaec, type: 3}
       propertyPath: RoomB
@@ -2907,7 +2907,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 3624257370745122648}
+    m_TransformParent: {fileID: 176088290809891321}
     m_Modifications:
     - target: {fileID: 324626184304589510, guid: ee43ced8bcc91254b836afa98c2eeaec, type: 3}
       propertyPath: RoomB
@@ -3079,13 +3079,13 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -1477210279076763348, guid: 1cc919e0285a00249b1a26ce3ded6bfa, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8891530478399530315}
-    - targetCorrespondingSourceObject: {fileID: 6576804313947705229, guid: 1cc919e0285a00249b1a26ce3ded6bfa, type: 3}
+    - targetCorrespondingSourceObject: {fileID: -1477210279076763348, guid: 1cc919e0285a00249b1a26ce3ded6bfa, type: 3}
       insertIndex: -1
       addedObject: {fileID: 695350591476490569}
-    - targetCorrespondingSourceObject: {fileID: 6652261776656641079, guid: 1cc919e0285a00249b1a26ce3ded6bfa, type: 3}
+    - targetCorrespondingSourceObject: {fileID: -1477210279076763348, guid: 1cc919e0285a00249b1a26ce3ded6bfa, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2102756965915891433}
-    - targetCorrespondingSourceObject: {fileID: 1185271910990570060, guid: 1cc919e0285a00249b1a26ce3ded6bfa, type: 3}
+    - targetCorrespondingSourceObject: {fileID: -1477210279076763348, guid: 1cc919e0285a00249b1a26ce3ded6bfa, type: 3}
       insertIndex: -1
       addedObject: {fileID: 9022644944204623552}
     m_AddedComponents:
@@ -3188,16 +3188,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 791009efb3b34e01bb742bbb1d906de7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FailCake.VIS::FailCake.VIS.entity_vis_room
---- !u!4 &3624257370745122648 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 6576804313947705229, guid: 1cc919e0285a00249b1a26ce3ded6bfa, type: 3}
-  m_PrefabInstance: {fileID: 7570113702985638101}
-  m_PrefabAsset: {fileID: 0}
---- !u!4 &3846046159273561314 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 6652261776656641079, guid: 1cc919e0285a00249b1a26ce3ded6bfa, type: 3}
-  m_PrefabInstance: {fileID: 7570113702985638101}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &4994885086668406710 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -6026071627379073181, guid: 1cc919e0285a00249b1a26ce3ded6bfa, type: 3}
@@ -3224,18 +3214,13 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 9.767999, y: 6.314, z: 5.302001}
   m_Center: {x: -4.8839993, y: 0.36300004, z: -0.010999441}
---- !u!4 &8754044158761616025 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 1185271910990570060, guid: 1cc919e0285a00249b1a26ce3ded6bfa, type: 3}
-  m_PrefabInstance: {fileID: 7570113702985638101}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &8461690439195755499
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 3846046159273561314}
+    m_TransformParent: {fileID: 176088290809891321}
     m_Modifications:
     - target: {fileID: 324626184304589510, guid: ee43ced8bcc91254b836afa98c2eeaec, type: 3}
       propertyPath: RoomB
